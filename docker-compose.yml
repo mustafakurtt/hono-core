@@ -1,0 +1,20 @@
+# hono-core'un KENDİ testleri için minimal altyapı. Yalnızca core/db (BaseRepository)
+# gerçek bir Postgres ister; diğer 90 test altyapısız koşar.
+#
+# Port 5433 — tüketici projelerin 5432'siyle çakışmasın (ikisi aynı anda ayakta olabilir).
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: hono_core_test_pg
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: hono_core_test
+    ports:
+      - "5433:5432"
+    # Test verisi kalıcı olmamalı — her koşu temiz başlasın diye volume YOK.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 10

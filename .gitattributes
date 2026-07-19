@@ -1,0 +1,8 @@
+# Normalize line endings: LF in the repo, auto on checkout.
+* text=auto eol=lf
+
+# Binary / generated — never normalize or diff as text.
+bun.lock -diff
+*.png binary
+*.jpg binary
+*.ico binary

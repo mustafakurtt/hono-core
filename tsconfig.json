@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    // Environment
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "moduleDetection": "force",
+    "types": ["bun-types"],
+
+    // Strictness
+    "strict": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+
+    // Kütüphane olduğu için tüketici projelerden daha katı:
+    // kullanılmayan kod ve eksik return'ler pakete sızmasın.
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true
+  },
+  "include": ["src", "tests"]
+}
