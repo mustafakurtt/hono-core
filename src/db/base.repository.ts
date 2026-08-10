@@ -1,5 +1,15 @@
-import { and, desc, eq, isNull, lt, sql, type InferInsertModel, type InferSelectModel, type SQL } from "drizzle-orm";
+import { and, desc, eq, lt, sql, type InferInsertModel, type InferSelectModel, type SQL } from "drizzle-orm";
 import type { PgAsyncDatabase, PgColumn, PgTable } from "drizzle-orm/pg-core";
+import {
+  aliveFilter,
+  buildEqualityFilter,
+  requireScopedFilter,
+  resolveDeletedAt,
+  withAliveFilter,
+  type ReadOptions,
+} from "./query-filters";
+
+export type { ReadOptions };
 
 /**
  * ⚠️ Drizzle + PostgreSQL'e ÖZGÜ modül. core/'un tek DB/ORM-bağımlı parçası
@@ -39,11 +49,6 @@ export interface BaseRepositoryOptions<TQuery> {
   query?: TQuery;
 }
 
-/** Okuma metodlarında silinmiş kayıtları da dahil etme seçeneği. */
-export interface ReadOptions {
-  withDeleted?: boolean;
-}
-
 /** Keyset (cursor) sayfalama seçenekleri — tek tablo, JOIN'siz akışlar için. */
 export interface KeysetOptions<TTable extends WithId> extends ReadOptions {
   /** Ek eşitlik filtresi (ör. `{ userId }`). */
@@ -68,12 +73,7 @@ export class BaseRepository<TTable extends WithId, TQuery = unknown> {
   ) {
     this.softDelete = options.softDelete ?? false;
     this.query = options.query;
-    if (this.softDelete) {
-      this.deletedAt = (this.table as Record<string, unknown>).deletedAt as PgColumn | undefined;
-      if (!this.deletedAt) {
-        throw new Error("BaseRepository: softDelete=true ama tabloda `deletedAt` kolonu yok.");
-      }
-    }
+    this.deletedAt = resolveDeletedAt(this.table as PgTable, this.softDelete, "BaseRepository");
   }
 
   // ── Yazma ──────────────────────────────────────────────────────────────
@@ -285,58 +285,22 @@ export class BaseRepository<TTable extends WithId, TQuery = unknown> {
   }
 
   // ── Yardımcılar ────────────────────────────────────────────────────────
-  /** Soft-delete açıksa ve withDeleted istenmemişse "deletedAt IS NULL" koşulu. */
+  // Filtre kurma kuralları `query-filters.ts`te; `CompositeKeyRepository` ile
+  // paylaşılır (undefined reddi, bilinmeyen kolon hatası, boş filtre koruması).
   private aliveFilter(options?: ReadOptions): SQL | undefined {
-    if (!this.deletedAt || options?.withDeleted) return undefined;
-    return isNull(this.deletedAt);
+    return aliveFilter(this.deletedAt, options);
   }
 
-  /** Bir koşulu (örn. id eşitliği) canlılık filtresiyle AND'ler. */
   private scopedWhere(condition: SQL, options?: ReadOptions): SQL {
-    const alive = this.aliveFilter(options);
-    return alive ? (and(condition, alive) as SQL) : condition;
+    return withAliveFilter(condition, this.deletedAt, options);
   }
 
-  /**
-   * `{ col: value }` nesnesini `and(eq | isNull)` zincirine çevirir. Değer `null`
-   * ise `IS NULL`. Boş nesne tüm satırları hedefler (SQL: `1=1`) — yalnızca okumalarda
-   * anlamlıdır; yazma metodları bunu ayrıca engeller (bkz. requireScoped).
-   *
-   * Güvenlik: bir kolon değeri `undefined` verilirse HATA fırlatır. `undefined`
-   * neredeyse her zaman bir bug'dır (ör. tanımsız değişken) ve sessizce geçerse
-   * "tüm tabloyu hedefle"ye dönüşebilir — `IS NULL` istiyorsan açıkça `null` geç.
-   * Tabloda olmayan kolon adı da net hata verir (yazım hatası sessiz geçmesin).
-   */
   private buildWhere(where: WhereFilter<TTable>): SQL {
-    const conditions: SQL[] = [];
-    for (const [key, value] of Object.entries(where)) {
-      if (value === undefined) {
-        throw new Error(
-          `BaseRepository.buildWhere: '${key}' değeri undefined. IS NULL için açıkça null geç.`
-        );
-      }
-      const column = (this.table as Record<string, unknown>)[key] as PgColumn | undefined;
-      if (!column || typeof (column as { name?: unknown }).name !== "string") {
-        throw new Error(`BaseRepository.buildWhere: '${key}' bu tabloda bir kolon değil.`);
-      }
-      conditions.push(value === null ? isNull(column) : eq(column, value));
-    }
-    if (conditions.length === 0) return sql`1 = 1`;
-    return conditions.length === 1 ? conditions[0] : (and(...conditions) as SQL);
+    return buildEqualityFilter(this.table as PgTable, where, "BaseRepository.buildWhere");
   }
 
-  /**
-   * Yazma (updateWhere/deleteWhere) için filtreyi doğrular ve kurar: BOŞ filtreyle
-   * toplu güncelleme/silmeyi engeller. Kasıtlı "tümünü sil/güncelle" istisnai bir
-   * iştir ve bilerek ham Drizzle ile yazılmalıdır — kaza eseri `{}` tabloyu silmesin.
-   */
   private requireScopedWhere(where: WhereFilter<TTable>, method: string): SQL {
-    if (Object.keys(where).length === 0) {
-      throw new Error(
-        `BaseRepository.${method}: boş filtreyle toplu yazma engellendi (tüm tabloyu etkilerdi).`
-      );
-    }
-    return this.buildWhere(where);
+    return requireScopedFilter(this.table as PgTable, where, `BaseRepository.${method}`);
   }
 
   private assertSoftDelete(method: string) {
