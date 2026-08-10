@@ -1,75 +1,63 @@
-import { Context, Next } from "hono";
-import { Variables, AuthClaims } from "../auth/auth.middleware";
-import { ForbiddenError } from "../http/errors";
-import { AuthzContext } from "./rbac.types";
+import { authMiddleware } from "../auth/auth.middleware";
+import type { AuthClaims } from "../auth/auth.middleware";
+import { createRbac, type Rbac } from "./rbac.factory";
+import type { GuardStep } from "./guard-chain";
+import type { AuthzContext, RbacVariables } from "./rbac.types";
 
-export type RbacVariables = Variables & {
-  authz: AuthzContext;
-  /** enforceTenantScope tarafından set edilir (bkz. tenant-scope.ts). Opsiyonel. */
-  scopeTenantId?: string;
-};
+export type { RbacVariables };
 
 /**
- * DİKİŞ: RBAC motoru proje-bağımsız kalsın diye projeye özgü HER ŞEY enjekte edilir
- * (setGuardAuditSink deseni). Core ne alan adı (userId) ne rol adı (super_admin)
- * İSMEN bilir; izin kaynağı da (resolveAuthz) enjekte edildiği için core/rbac
- * shared'a HİÇ bağlı değildir.
+ * SÜREÇ-GENELİ TEK ÖRNEK — `createRbac`'ın (bkz. `rbac.factory.ts`) global
+ * kurulumu. Tek uygulamalı projeler için pratiktir; aynı süreçte iki farklı
+ * yapılandırma ya da izole testler gerekiyorsa fabrika kullanılmalıdır.
  *
- * Sözleşme MİNİMALDİR: yalnızca özne kimliği + authz çözümü. Hesap durumu / rütbe
- * gibi proje POLİTİKALARI çekirdeğe girmez — `enforce` hook'u ile enjekte edilir.
- * Tenant-scope AYRI bir modüldür (tenant-scope.ts, ayrı configure) — sadece-rol
- * veya tek-tenant projeler tenant'ı hiç yapılandırmaz.
+ * DİKİŞ: projeye özgü HER ŞEY enjekte edilir. Core ne alan adı (userId) ne rol
+ * adı (super_admin) İSMEN bilir; izin kaynağı da enjekte edildiği için core/rbac
+ * projeye HİÇ bağlı değildir.
+ *
+ * Sözleşme MİNİMALDİR: özne kimliği + authz çözümü. Hesap durumu gibi proje
+ * POLİTİKALARI `enforce` ile, zincire giren ek adımlar ise fabrikanın `steps`
+ * seçeneğiyle eklenir. Tenant-scope AYRI bir modüldür (tenant-scope.ts).
  */
 export interface RbacConfig {
   /** Kullanıcı payload'ından authz araması için özne kimliğini çıkarır. */
   getSubjectId: (user: AuthClaims) => string;
-  /** Bir öznenin çözülmüş authz bağlamını verir (proje: Redis cache'li repo). */
+  /** Bir öznenin çözülmüş authz bağlamını verir (proje: cache'li repo). */
   resolveAuthz: (subjectId: string) => Promise<AuthzContext>;
   /**
-   * Resolve SONRASI proje politikası (opsiyonel). `attachAuthz` her istekte çağırır;
-   * erişim reddediliyorsa FIRLATIR (ör. suspended hesabı kesmek). Verilmezse
-   * politika uygulanmaz — core "suspended" gibi bir kavramı bilmez.
+   * Resolve SONRASI proje politikası (opsiyonel). Erişim reddediliyorsa FIRLATIR
+   * (ör. askıya alınmış hesabı kesmek). Token claim'leri de verilir; tek
+   * parametreli mevcut fonksiyonlar aynen çalışmaya devam eder.
    */
-  enforce?: (authz: AuthzContext) => void;
+  enforce?: (authz: AuthzContext, user: AuthClaims) => void;
 }
 
 let config: RbacConfig | null = null;
+let instance: Rbac | null = null;
 
 export function configureRbac(next: RbacConfig) {
   config = next;
+  instance = null; // yeniden yapılandırma bir sonraki istekte geçerli olsun
 }
 
-function cfg(): RbacConfig {
+function rbac(): Rbac {
   if (!config) throw new Error("RBAC yapılandırılmadı: configureRbac çağrılmalı.");
-  return config;
+  return (instance ??= createRbac({ auth: authMiddleware, ...config }));
 }
 
 /**
  * authMiddleware'den SONRA çalışmalıdır. Öznenin authz bağlamını çözüp context'e
- * ekler ve varsa proje politikasını (`enforce`) uygular — böylece askıya alınan
- * kullanıcının erişimi bir sonraki istekte ANINDA kesilebilir (politika projede).
+ * ekler ve varsa proje politikasını uygular — böylece askıya alınan kullanıcının
+ * erişimi bir sonraki istekte ANINDA kesilebilir (politika projede).
  */
-export const attachAuthz = async (c: Context<{ Variables: RbacVariables }>, next: Next) => {
-  const authz = await cfg().resolveAuthz(cfg().getSubjectId(c.get("user")));
-  cfg().enforce?.(authz);
-  c.set("authz", authz);
-  await next();
-};
+export const attachAuthz: GuardStep = (c, next) => rbac().attachAuthz(c, next);
 
-export const requirePermission = (key: string) => {
-  return async (c: Context<{ Variables: RbacVariables }>, next: Next) => {
-    if (!c.get("authz").permissions.includes(key)) {
-      throw new ForbiddenError("rbac.forbidden");
-    }
-    await next();
-  };
-};
+export const requirePermission =
+  (key: string): GuardStep =>
+  (c, next) =>
+    rbac().requirePermission(key)(c, next);
 
-export const requireRole = (roleName: string) => {
-  return async (c: Context<{ Variables: RbacVariables }>, next: Next) => {
-    if (!c.get("authz").roles.includes(roleName)) {
-      throw new ForbiddenError("rbac.forbidden");
-    }
-    await next();
-  };
-};
+export const requireRole =
+  (roleName: string): GuardStep =>
+  (c, next) =>
+    rbac().requireRole(roleName)(c, next);

@@ -1,8 +1,7 @@
 import { Context, Next } from "hono";
 import { AuthClaims } from "../auth/auth.middleware";
 import { ForbiddenError } from "../http/errors";
-import { AuthzContext } from "./rbac.types";
-import { RbacVariables } from "./rbac.middleware";
+import type { AuthzContext, RbacVariables } from "./rbac.types";
 
 /**
  * Çok-tenant (multi-tenant) sınır zorlaması — RBAC'tan AYRI, OPSİYONEL bir eksen.
