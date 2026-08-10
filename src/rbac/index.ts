@@ -46,4 +46,15 @@ export type {
   TenantScopedGuardChain,
 } from "./guard-chain";
 
+export {
+  bootstrapPermissions,
+  totalChanges,
+  type BootstrapReport,
+  type PermissionCatalog,
+  type PermissionDefinition,
+  type PermissionStore,
+  type RoleDefinition,
+  type RolePermissionLink,
+} from "./permission-bootstrap";
+
 export type { AuthzContext } from "./rbac.types";
