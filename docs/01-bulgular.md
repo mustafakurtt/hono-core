@@ -24,18 +24,18 @@ doğrulandı (`C:\Users\mustafa\Desktop\laputa-projects\laputa-backend`,
 | C-2 | Kaynak dağıtımı tüketiciye ambient tip bağımlılığı dayatıyor | Orta | Hayır (doküman) | ✅ ÇÖZÜLDÜ |
 | C-3 | ~~`requestId` mekanizması yok~~ → doküman eksiği | **Düşük** | Hayır (doküman) | ⚠️ **Düzeltildi** — Hono zaten sağlıyor |
 | C-4 | `generatePassword` "garantili çeşitlilik" iddiası tutmuyor | Düşük | Hayır (davranış düzeltmesi) | ✅ ÇÖZÜLDÜ |
-| C-5 | Modül düzeyi singleton'lar tek-app varsayıyor | Yüksek (mimari) | Hayır (eklemeli) | Doğrulandı |
+| C-5 | Modül düzeyi singleton'lar tek-app varsayıyor | Yüksek (mimari) | Hayır (eklemeli) | ✅ ÇÖZÜLDÜ |
 | C-6 | `LocalDiskStorage` iç içe key'leri desteklemiyor | Düşük | Hayır (hata düzeltmesi) | ✅ ÇÖZÜLDÜ |
 | C-7 | `drizzle-orm` peer tabanı bir rc sürümü | Düşük | Hayır (metadata) | ✅ ÇÖZÜLDÜ |
-| C-8 | Beş modülün hiç testi yok | Orta | Hayır | 🟡 shutdown/config/storage/zod tamam; request-logger açık |
-| **C-9** | **`enforce` kancası claim'leri göremiyor → oturum iptali sığmıyor** | **Yüksek** | Hayır (eklemeli) | 🆕 laputa'da bulundu |
-| **C-10** | **`guard()` izin anahtarı üzerinde generic değil** | Orta | Hayır (eklemeli) | 🆕 laputa'da bulundu |
-| **C-11** | **Sonuç: core'un `guard()`'ı tüketicide ölü kod** | **Yüksek** | — | 🆕 C-5+C-9+C-10'un bileşimi |
+| C-8 | Beş modülün hiç testi yok | Orta | Hayır | ✅ ÇÖZÜLDÜ (162 test) |
+| C-9 | `enforce` kancası claim'leri göremiyor → oturum iptali sığmıyor | Yüksek | Hayır (eklemeli) | ✅ ÇÖZÜLDÜ |
+| C-10 | `guard()` izin anahtarı üzerinde generic değil | Orta | Hayır (eklemeli) | ✅ ÇÖZÜLDÜ |
+| C-11 | Sonuç: core'un `guard()`'ı tüketicide ölü kod | Yüksek | — | ✅ ÇÖZÜLDÜ — kabul ölçütü derlenerek kanıtlandı |
 | T-1 | İzin kataloğu ↔ DB senkronu (`db:bootstrap`) yok | Yüksek | Hayır (eklemeli) | ✅ Doğrulandı (231 satır) |
 | T-2 | Çalışma anında şema seçiminde ham `ZodError` → 500 | Yüksek | Hayır (eklemeli) | ✅ ÇÖZÜLDÜ |
-| T-3 | `authMiddleware` yalnızca Bearer okuyor | Orta | Hayır (eklemeli) | ✅ Doğrulandı |
+| T-3 | `authMiddleware` yalnızca Bearer okuyor | Orta | Hayır (eklemeli) | ✅ ÇÖZÜLDÜ |
 | T-4 | `BaseRepository` bileşik anahtarı / dinamik tabloyu karşılamıyor | **Yüksek** ⬆ | Hayır (eklemeli) | ✅ Doğrulandı — sanılandan **büyük** (11 tablo) |
-| T-5 | Denetim izinin "GET atla" politikası core'a gömülü | Orta | Hayır (eklemeli) | ✅ Doğrulandı |
+| T-5 | Denetim izinin "GET atla" politikası core'a gömülü | Orta | Hayır (eklemeli) | ✅ ÇÖZÜLDÜ |
 | T-6 | Core CI'ında tüketici duman testi yok | Yüksek (süreç) | — | ✅ **ÇÖZÜLDÜ** (Katman A + B) |
 | T-7 | Tüketicilerde core sürümü kilitli değil | ~~Yüksek~~ | — | ✅ **Zaten çözülmüş** (`#v0.1.0`) |
 | T-8 | uniclub-backend ayrışmış vendor kopya taşıyor | Yüksek (süreç) | — | Karar bekliyor |

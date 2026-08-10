@@ -143,32 +143,49 @@ Hepsi yapıldı; etiketlenmeyi bekliyor. Tüketiciye bakan özet:
 
 ---
 
-## v0.3.0 — RBAC/auth kompozisyonunu aç (`C-11`: `C-5`+`C-9`+`C-10`+`T-3`)
+## v0.3.0 — RBAC/auth kompozisyonunu aç · ✅ TAMAMLANDI
 
-Kataloğun **en yüksek değerli işi**. Dört bulgu tek bir dönüşümle kapanıyor.
+Dört bulgu (`C-5`, `C-9`, `C-10`, `T-3` → `C-11`) tek dönüşümle kapandı; `T-5`
+ve `C-8` de yanında bitti. Tamamı **eklemeli** — kırıcı değişiklik yok.
+Tüketiciye bakan özet: [`surumler/yayinlanmamis.md`](surumler/yayinlanmamis.md).
 
-> **Revizyon notu:** İlk taslakta bu yalnızca "fabrika dönüşümü" (`C-5`) idi.
-> laputa incelemesi iki şey daha ekledi (`C-9` `enforce` imzası, `C-10` generic
-> anahtar) ve asıl semptomu görünür kıldı (`C-11`: `guard()` tüketicide ölü kod).
+Eklenenler:
 
-Yapılacaklar:
+1. `createAuth({ verify, extract })` + `bearerToken`/`cookieToken`/`firstToken` — `T-3`
+2. `enforce(authz, user)` — claim'ler kancaya geçer, geriye uyumlu — `C-9`
+3. `createRbac<Key>({...})` — tipli izin anahtarı — `C-10`
+4. `steps` — `attachAuthz` sonrası proje adımları — `C-11`
+5. `shouldAudit` — denetim politikası dışarıdan — `T-5`
+6. Singleton'lar (`configureRbac`, `setTokenVerifier`, `guard`) fabrikaların
+   üzerine kurulu ince uyumluluk katmanına dönüştü; davranış aynı.
 
-1. **`createAuth({ verify, extract })`** — token çıkarıcı enjekte edilebilir,
-   varsayılan Bearer. `T-3`'ü kapatır.
-2. **`enforce(authz, user)`** — kancaya claim'ler de geçsin. `C-9`'u kapatır,
-   geriye uyumlu (dar imza geniş imzaya atanabilir).
-3. **`createRbac<PermissionKey>({...})`** — izin anahtarı generic. `C-10`.
-4. **`guard()` kompozisyonu açılabilir** — ekstra adım eklenebilsin
-   (`requireCurrentSession` gibi). `C-11`.
-5. Mevcut `setTokenVerifier` / `configureRbac` / `authMiddleware` / `guard`
-   bunların süreç-genelinde tek örneği olarak **aynen çalışmaya devam eder**.
+**Kabul ölçütü karşılandı, derlenerek kanıtlandı.** laputa'nın elle kurduğu
+zincir 11 satıra iniyor ve projenin 40 satırlık kendi `auth.middleware.ts`'i
+tamamen gereksizleşiyor:
 
-**Kabul ölçütü — iki tane, ikisi de somut:**
+```ts
+const auth = createAuth({
+  verify: verifyToken,
+  extract: firstToken(cookieToken(SESSION_COOKIE), bearerToken),
+});
 
-- İki bağımsız app örneği aynı süreçte, farklı yapılandırmayla ayağa kalkabiliyor
-  (bugün imkânsız).
-- **`laputa-backend/src/shared/rbac/guard.ts` core'un fabrikasıyla ~5 satıra
-  iniyor.** İnmiyorsa tasarım henüz doğru değil — bu, `C-11`'in gerçek testi.
+export const { guard } = createRbac<PermissionKey>({
+  auth: auth.middleware,
+  getSubjectId: (user) => user.userId,
+  resolveAuthz: loadAuthz,
+  steps: [requireCurrentSession],
+});
+```
+
+Ayrıca doğrulandı: `c.req.param()` tipleri korunuyor, var olmayan izin anahtarı
+derleme hatası veriyor, iki bağımsız örnek aynı süreçte yaşayabiliyor.
+
+**Zincir arity'si nasıl korundu:** proje adımları zincire ayrı eleman olarak
+girmiyor; `hono/combine`'ın `every()`'siyle tek bir "policy" halkasına
+katlanıyor. Böylece kaç adım eklenirse eklensin tuple uzunluğu sabit kalıyor —
+Hono'nun rota overload'ları argüman sayısını derleme zamanında bilmek zorunda.
+`guard`/`guardRole` de union yerine **overload** döndürüyor; union olsaydı
+spread arity'yi çözemezdi.
 
 ---
 
