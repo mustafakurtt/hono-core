@@ -189,28 +189,35 @@ spread arity'yi çözemezdi.
 
 ---
 
-## v0.4.0 — İki yol ayrımı: `CompositeKeyRepository` (`T-4`) ve `db:bootstrap` (`T-1`)
+## v0.4.0 — `CompositeKeyRepository` (`T-4`) ve `db:bootstrap` (`T-1`) · ✅ TAMAMLANDI
 
-> **Revizyon notu:** İlk taslakta `T-1` v0.4'te tekti ve `T-4` "sürümlenmemiş"
-> listedeydi. Doğrulama `T-4`'ü büyüttü (2 tablo değil **11 tablo**, i18n *ve*
-> RBAC join tabloları) — artık `T-1` ile aynı ağırlıkta.
+Tamamı **eklemeli**. Tüketiciye bakan özet:
+[`surumler/yayinlanmamis.md`](surumler/yayinlanmamis.md).
 
-**`T-4` — `CompositeKeyRepository`.** Kanıt en güçlü olan madde: core'un kendi
-RBAC şeması (`rolePermissions`, `userRoles`, `userPermissions`) bile core'un
-veri katmanına sığmıyor. `findByKey` / `upsert` / `deleteByKey` üzerinden ayrı
-bir sınıf; `BaseRepository`'yi `IdOf` etrafında karmaşıklaştırma. **`upsert`
-unutulmamalı** — bileşik anahtarlı tabloların asıl ihtiyacı ve bugün core'da hiç
-yok.
+**`T-4` — `CompositeKeyRepository`.** `BaseRepository`'yi `IdOf` etrafında
+karmaşıklaştırmak yerine ayrı sınıf; filtre kuralları `query-filters.ts`te
+paylaşılıyor. `upsert` eklendi — bileşik anahtarlı tabloların baskın deseniydi
+ve core'da hiç yoktu. İki tuzak kapatıldı: `onConflictDoNothing` yerine
+`DoUpdate` (değişiklikleri yutmasın) ve upsert'te `updatedAt` tazeleme
+(Drizzle'ın `$onUpdate`'i orada çalışmaz).
 
-**`T-1` — `db:bootstrap`.** En yüksek ürün değeri, en çok tasarım gerektiren
-madde. Önce port tasarla (`PermissionCatalog` → `PermissionStore`), bootstrap'ı
-portun üstüne yaz, **bellek adaptörüyle** test et — core DB'ye bağlanmamalı
-(mevcut `CacheStore`/`StorageStore` felsefesi). Taşınacak olan kod değil
-kurallar: idempotentlik, açıklama güncelleme, çıkarılan yetkinin bağını
-kaldırma, cache düşürme, raporlama, **kendi katalog kopyasını tutmama**.
+**`T-1` — `bootstrapPermissions`.** `PermissionCatalog` → `PermissionStore`
+portu; core depoya dokunmuyor, bellek adaptörüyle test ediliyor. Fark hesabı
+core'da, uygulama adaptörde — port minimal kalıyor ve kurallar her adaptörde
+aynı geçerli oluyor.
 
-`laputa/src/db/bootstrap.ts` (231 satır) referans implementasyon olarak
-kullanılabilir — ama olduğu gibi taşınmaz, port arkasına alınır.
+Güvenlik profili bilinçli: izin/rol **satırları silinmez** (yabancı anahtar
+kırabilir, geri alınamaz — `orphaned` olarak raporlanır), ama rol↔izin
+**bağları kaldırılır** (bir izin paketten çıktıysa rol onu gerçekten
+kaybetmeli). Katalogda tanımlı olmayan rollerin bağlarına dokunulmaz.
+
+**Bu sürümün tamamı gerçek Postgres'e karşı koşuldu** (`docker compose up -d`),
+önceki sürümlerde atlanan 23 db testi dahil. Test sayısı 168 → 222.
+
+**Kapsam dışı bırakılan:** çalışma anında tablo seçimi (kayıt defteri deseni).
+Tüketicideki elle yazılmış hâli incelendi ve gerekçesi bilinçli çıktı (payload'a
+hangi kolonun çıktığını dosyada görünür kılmak) — core'un düzeltebileceği bir
+eksik değil.
 
 ---
 
@@ -218,10 +225,18 @@ kullanılabilir — ama olduğu gibi taşınmaz, port arkasına alınır.
 
 | Konu | Aksiyon | Durum |
 |---|---|---|
-| `T-5` audit predikatı | `auditTrail`'e `shouldAudit(c)` opsiyonu; varsayılan bugünkü `SKIP_METHODS`. laputa'nın export uç workaround'u silinebilir hale gelir. | v0.3'e sığar |
+| `T-5` audit predikatı | — | ✅ v0.3.0 |
+| `T-7` sürüm kilidi | — | ✅ Zaten çözülmüş |
 | `T-4` dinamik tablo | Kod değil **doküman**: "bu durumda elle yaz, işte deseni". | Düşük öncelik |
-| `T-7` sürüm kilidi | — | ✅ Zaten çözülmüş (`#v0.1.0`) |
+| `C-2` `.d.ts` + `.js` yayınlama | Bun-dışı tüketici ihtiyacı doğmadan yapma. | Beklemede |
 | `T-8` uniclub çatallanması | **Karar ver, erteleme.** Üç seçenek `01-bulgular.md`'de. | ⏳ Sende |
+
+## Katalog durumu
+
+16 bulgunun 15'i kapandı. Açık kalan tek madde `T-8` ve o bir **karar**, iş
+değil. Bundan sonrası artık "bulgu kapatma" değil, yeni tüketicilerden gelecek
+geri bildirimle ilerleme — ki `check:consumer` ve bağımlılık sözleşmesi testi
+tam da bunun için var.
 
 ---
 

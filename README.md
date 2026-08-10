@@ -57,14 +57,14 @@ karşı doğrulanır. Bir modül bildirilmemiş bir peer'a uzanırsa test kırı
 
 | Modül | Ne yapar | Peer |
 |---|---|---|
-| `/auth` | `authMiddleware` (opak claim'ler), `createJwt`, şifre hash'leme | hono |
-| `/rbac` | `guard()` / `guardRole()` zinciri, izin & rol kontrolü, tenant kapsamı, denetim kancası | hono |
+| `/auth` | `createAuth()` fabrikası, token kaynakları (Bearer/çerez), `createJwt`, şifre hash'leme | hono |
+| `/rbac` | `createRbac()` fabrikası, `guard()` zinciri, izin & rol kontrolü, tenant kapsamı, denetim kancası, izin kataloğu senkronu | hono |
 | `/http` | `HttpError` ailesi, merkezi hata yakalayıcı, yanıt zarfı, istek logu, düzgün kapanma | hono |
 | `/http/validation` | `createValidator` — zod doğrulamasını tek hata çıkışına bağlar | hono, zod, @hono/zod-validator |
 | `/i18n` | Sıfır-bağımlılıklı çevirmen, katalog parite kilidi, dil çözümleme | hono |
 | `/cache` | `Cache` facade (read-through + single-flight + namespace), memory/redis/null adaptörleri | — |
 | `/ratelimit` | Sabit pencere sınırlayıcı (fail-open), memory/redis adaptörleri | hono |
-| `/db` | `BaseRepository` (CRUD, soft delete, keyset, transaction), ortak kolon setleri | drizzle-orm |
+| `/db` | `BaseRepository` (CRUD, soft delete, keyset, transaction), `CompositeKeyRepository` (bileşik anahtar + upsert), ortak kolon setleri | drizzle-orm |
 | `/storage` | Nesne depolama portu, disk/memory adaptörleri, MIME sniffing | — |
 | `/logger` | pino fabrikası (çoklu hedef, redaction) | pino |
 | `/config` | zod ile ortam değişkeni doğrulama, `envBoolean` | zod |
