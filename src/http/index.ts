@@ -46,4 +46,5 @@ export {
   createShutdownManager,
   type ShutdownManagerOptions,
   type ShutdownManager,
+  type ProcessSignal,
 } from "./shutdown";

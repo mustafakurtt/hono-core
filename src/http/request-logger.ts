@@ -13,7 +13,10 @@ import { LogLevel, type EmittableLogLevel, type Logger } from "../logger/logger"
 export interface RequestLoggerOptions {
   /** Projenin kök/child logger'ı (ör. `logger.child({ module: "http" })`). */
   logger: Logger;
-  /** requestId'yi context'ten okuma yolu. Varsayılan `c.get("requestId")` (error-handler ile aynı). */
+  /**
+   * requestId'yi context'ten okuma yolu. Varsayılan `c.get("requestId")`
+   * (error-handler ile aynı) — `hono/request-id` middleware'i bu anahtarı kurar.
+   */
   getRequestId?: (c: Context) => string | undefined;
   /**
    * HTTP status → log seviyesi. Varsayılan: 5xx→Error, 4xx→Warn, aksi Info.

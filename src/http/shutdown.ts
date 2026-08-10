@@ -13,12 +13,20 @@ import type { Logger } from "../logger/logger";
  *
  * `onExit` enjekte edilebilir → süreç sonlandırmadan birim test edilebilir.
  */
+/**
+ * Dinlenebilir süreç sinyali. `NodeJS.Signals` YERİNE kendi tipimiz: core
+ * kaynak olarak dağıtıldığı için tüketicinin `tsc`'si bu dosyayı derler ve
+ * `NodeJS` ambient namespace'i `@types/node` kurulu değilse çözülemezdi.
+ * `(string & {})` bilinen adları öneri olarak korur, diğerlerini engellemez.
+ */
+export type ProcessSignal = "SIGTERM" | "SIGINT" | "SIGHUP" | "SIGQUIT" | (string & {});
+
 export interface ShutdownManagerOptions {
   logger?: Logger;
   /** Toplam kapanış bütçesi (ms). Aşılırsa zorla çıkılır. Varsayılan 10000. */
   timeoutMs?: number;
   /** Dinlenecek sinyaller. Varsayılan SIGTERM + SIGINT. */
-  signals?: NodeJS.Signals[];
+  signals?: ProcessSignal[];
   /** Kapanış bitince/timeout'ta çağrılır. Varsayılan `process.exit`. */
   onExit?: (code: number) => void;
 }

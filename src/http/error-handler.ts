@@ -32,7 +32,13 @@ export interface ErrorHandlerOptions {
    * Verilmezse yalnızca HttpError/HTTPException iş hatası sayılır.
    */
   isBusinessError?: (error: unknown) => error is Error;
-  /** requestId'yi context'ten okuma yolu (proje konvansiyonu). Varsayılan `c.get("requestId")`. */
+  /**
+   * requestId'yi context'ten okuma yolu. Varsayılan `c.get("requestId")` —
+   * Hono'nun kendi middleware'iyle uyumludur, core ayrıca bir üretici sunmaz:
+   *
+   *   import { requestId } from "hono/request-id";
+   *   app.use("*", requestId());
+   */
   getRequestId?: (c: Context) => string | undefined;
   /** Mesaj anahtarlarını çeviren fonksiyon (proje kataloğuyla kurulur). */
   translate?: Translate;

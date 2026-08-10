@@ -38,6 +38,13 @@ Peer bağımlılıklar isteğe bağlıdır: yalnızca kullandığın modülünki
 `web-push` (notifications) ve `@hono/zod-validator` (http/validation) opsiyoneldir.
 
 Kaynak olarak dağıtılır (build adımı yok) — Bun TypeScript'i doğrudan çalıştırır.
+Bunun bir bedeli var: **tüketicinin `tsc`'si core'un kaynağını da derler**, bu
+yüzden `@types/bun` kurulu olmalıdır (`skipLibCheck` işe yaramaz — bunlar `.d.ts`
+değil `.ts`).
+
+```sh
+bun add -d @types/bun
+```
 
 ## Modüller
 
