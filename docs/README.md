@@ -66,9 +66,15 @@ Kırıcı karar verirken bakılacak tablo. Sayılar `grep` ile ölçüldü:
 | `/storage` `/redis` `/ratelimit` `/metrics` `/mail` `/config` `/cache` | 1'er | Tesisat; sorunsuz. |
 
 **Okuma:** Core'un *tesisatı* (log, cache, storage, redis, mail, metrics,
-ratelimit, i18n) sorunsuz çalışıyor. Sürtünmenin tamamı iki yerde toplanıyor:
+ratelimit, i18n) sorunsuz çalışıyor. Sürtünmenin tamamı iki yerde toplanıyordu:
 **RBAC/auth kompozisyonu** (`C-11`) ve **veri katmanı esnekliği** (`T-4`).
-Yol haritası bu yüzden v0.3'ü birinciye, v0.4'ü ikinciye ayırıyor.
+Yol haritası bu yüzden v0.3'ü birinciye, v0.4'ü ikinciye ayırdı.
+
+> **Not:** Tablodaki "kullanılmıyor / edemiyor" maddeleri **core tarafında
+> çözüldü** (v0.3.0 ve v0.4.0). Tüketici henüz yeni API'lere geçmedi; geçiş
+> zorunlu değil, kazanç isteğe bağlı. Ayrıntı:
+> [`surumler/v0.3.0.md`](surumler/v0.3.0.md) ve
+> [`surumler/v0.4.0.md`](surumler/v0.4.0.md).
 
 > ⚠️ Bu tablo elle tutuluyor. Yeni bir tüketici eklendiğinde buraya yazılmalı;
 > yoksa kırıcı değişikliğin kimi vurduğu bilinemez.

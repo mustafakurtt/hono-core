@@ -1,5 +1,5 @@
-# hono-core'un KENDİ testleri için minimal altyapı. Yalnızca core/db (BaseRepository)
-# gerçek bir Postgres ister; diğer 90 test altyapısız koşar.
+# hono-core'un KENDİ testleri için minimal altyapı. Yalnızca core/db repository'leri
+# gerçek bir Postgres ister; diğer testler altyapısız koşar.
 #
 # Port 5433 — tüketici projelerin 5432'siyle çakışmasın (ikisi aynı anda ayakta olabilir).
 services:

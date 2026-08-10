@@ -15,13 +15,18 @@ Core `env` okumaz, proje alan adlarını (`userId`, `tenantId`) ve rol adların�
 
 ```ts
 // Core mekanizmayı tanımlar; proje kurar.
-createLogger({ level, transports })          // logger örneği
-createErrorHandler({ logger, translate })    // merkezi hata çıkışı
-createRateLimiter({ store, keyFn, limit })   // hız sınırlayıcı
-configureRbac({ getSubjectId, resolveAuthz })// yetki motoru
-setTokenVerifier(fn)                         // token doğrulama
-setGuardAuditSink(fn)                        // denetim izi
+createLogger({ level, transports })            // logger örneği
+createErrorHandler({ logger, translate })      // merkezi hata çıkışı
+createRateLimiter({ store, keyFn, limit })     // hız sınırlayıcı
+createAuth({ verify, extract })                // kimlik doğrulama
+createRbac({ auth, resolveAuthz, steps })      // yetki motoru
+createZodErrorMapper({ format })               // doğrulama → 400 köprüsü
 ```
+
+Fabrikalar süreç durumu tutmaz: aynı süreçte birden çok yapılandırma
+(panel + genel API, ya da izole testler) mümkündür. Tek uygulamalı projeler
+için süreç-geneli kısayollar da vardır (`configureRbac`, `setTokenVerifier`) —
+ikisi de aynı fabrikanın üzerine kuruludur.
 
 Pratik sonucu: core'u başka bir projeye taşıdığında hiçbir satırını
 düzenlemezsin — sadece farklı şeyler enjekte edersin.
@@ -94,29 +99,41 @@ karşı doğrulanır. Bir modül bildirilmemiş bir peer'a uzanırsa test kırı
 ```ts
 import { Hono } from "hono";
 import { createLogger } from "@mustafakurtt/hono-core/logger";
-import { createErrorHandler, NotFoundError } from "@mustafakurtt/hono-core/http";
-import { configureRbac, guard, setGuardAuditSink } from "@mustafakurtt/hono-core/rbac";
-import { setTokenVerifier } from "@mustafakurtt/hono-core/auth";
+import { createAuth, bearerToken, cookieToken, firstToken } from "@mustafakurtt/hono-core/auth";
+import { createRbac } from "@mustafakurtt/hono-core/rbac";
+import { createErrorHandler, ForbiddenError } from "@mustafakurtt/hono-core/http";
 
 // 1) Proje kendi claim şeklini declaration merging ile tanımlar.
+//    Core hiçbir proje alanını ismen bilmez.
 declare module "@mustafakurtt/hono-core/auth" {
-  interface AuthClaims { userId: string; tenantId: string }
+  interface AuthClaims { userId: string; tokenVersion: number }
 }
+
+// 2) Proje kendi izin anahtarlarını tipler.
+type PermissionKey = "post.view" | "post.manage";
 
 const logger = createLogger({ level: "info" });
 
-// 2) Dikişleri açılışta bağla.
-setTokenVerifier(async (token) => verifyJwt(token));
-configureRbac({
+// 3) Fabrikaları kur — dikişler burada bağlanır.
+const auth = createAuth({
+  verify: verifyJwt,
+  // Tarayıcı çerezi önce: elle Bearer gönderen eski bir istemci güncel
+  // oturumun önüne geçmesin.
+  extract: firstToken(cookieToken("session"), bearerToken),
+});
+
+const { guard } = createRbac<PermissionKey>({
+  auth: auth.middleware,
   getSubjectId: (user) => user.userId,
-  resolveAuthz: (id) => loadPermissionsFromDb(id),
-  enforce: (authz) => {
+  resolveAuthz: loadPermissionsFromDb,
+  enforce: (authz, user) => {
     if (authz.status === "suspended") throw new ForbiddenError("rbac.accountSuspended");
   },
+  steps: [requireCurrentSession],        // yetki kontrolünden önce ek politika
+  audit: (c, key) => writeAuditRow(c, key),
 });
-setGuardAuditSink((c, key) => writeAuditRow(c, key));
 
-// 3) Rotalar guard zincirini kullanır.
+// 4) Rotalar guard zincirini kullanır. Anahtar tipli: yazım hatası derleme hatası.
 const app = new Hono();
 app.onError(createErrorHandler({ logger, fallbackMessage: "server.unexpected" }));
 app.post("/posts", ...guard("post.manage"), (c) => c.json({ ok: true }));
@@ -127,7 +144,7 @@ app.post("/posts", ...guard("post.manage"), (c) => c.json({ ok: true }));
 ```sh
 bun install
 bun run typecheck     # tsc --noEmit (src + tests)
-bun test              # 90 test, altyapı gerektirmez
+bun test              # 178 test, altyapı gerektirmez
 
 # core/db testleri gerçek Postgres ister:
 docker compose up -d
@@ -140,16 +157,21 @@ bun test              # artık db testleri de koşar
 
 ## Bilinen sınırlar
 
-- **v0.x, API dondurulmadı.** Çekirdek şu ana kadar tek bir üretim projesine karşı
-  doğrulandı; ikinci proje gerçek genellik testidir. Kırıcı değişiklik bekleyin.
+- **v0.x, API dondurulmadı.** Çekirdek iki üretim projesine karşı doğrulandı ve
+  ikinci proje üzerinden gelen bulgular kapatıldı; yine de kırıcı değişiklik
+  olabilir. Sürümü etikete kilitle (`#v0.4.0`), `main`'e bağlanma.
+- `/db`, core'un **Drizzle + PostgreSQL'e özgü** tek parçasıdır. ORM-agnostik
+  değildir, bilinçli olarak. `BaseRepository` tekil `id`, `CompositeKeyRepository`
+  bileşik anahtar içindir; çalışma anında tablo seçen desenler ikisine de girmez,
+  elle yazılır.
 - `rbac/audit-hook.ts` kendi logger örneğini modül yüklenirken kurar (seviyesi
-  yapılandırılamaz). Core'un tek enjekte-edilemeyen logger'ı; bilinçli bir ödün
-  (core → shared bağımlılığı eklememek için).
-- `/db` ve `base.entity`, core'un **Drizzle + PostgreSQL'e özgü** tek parçasıdır.
-  ORM-agnostik değildir, bilinçli olarak.
-- `configureRbac` / `configureTenantScope` / `setTokenVerifier` **modül düzeyinde
-  singleton** durum tutar. Tek uygulama örneği için doğru; aynı süreçte iki farklı
-  yapılandırma gerekiyorsa uygun değil.
+  yapılandırılamaz). Core'un tek enjekte-edilemeyen logger'ı; bilinçli bir ödün.
+- **Süreç-geneli kısayollar** (`configureRbac`, `configureTenantScope`,
+  `setTokenVerifier`) modül düzeyinde durum tutar. Tek uygulama örneği için
+  doğrudur; aynı süreçte iki yapılandırma ya da izole testler gerekiyorsa
+  fabrikaları kullan (`createAuth` / `createRbac`).
+- Kaynak olarak dağıtılır: tüketicinin `tsc`'si core'u da derler, `@types/bun`
+  şarttır (bkz. Kurulum).
 
 ## Lisans
 

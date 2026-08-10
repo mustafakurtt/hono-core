@@ -31,7 +31,7 @@ jobs:
         run: bun run typecheck
 
   # ── Testler ──────────────────────────────────────────────
-  # Testlerin çoğu altyapısızdır; yalnızca core/db (BaseRepository) gerçek bir
+  # Testlerin çoğu altyapısızdır; yalnızca core/db repository'leri gerçek bir
   # Postgres ister. DATABASE_URL burada verildiği için db testleri de koşar —
   # geliştirici makinesinde Docker kapalıysa o dosya sessizce atlanır.
   test:
