@@ -1,8 +1,8 @@
 # Yayınlanmamış (v0.2.0 hedefi)
 
-**Tek cümlelik özet:** Doğrulama katmanı `/http` barrel'ından ayrı bir alt yola
-taşındı; böylece `/http`'i yalnızca hata sözleşmesi için kullanan projeler artık
-`@hono/zod-validator` kurmak zorunda değil.
+**Tek cümlelik özet:** Doğrulama katmanı ikiye ayrıldı — kenar-bağımsız zod
+köprüsü `/http`'e, Hono middleware'i `/http/validation`'a. Yanında dört küçük
+düzeltme.
 
 **Kırıcı mı:** Evet — tek bir import yolu değişikliği.
 
@@ -12,41 +12,27 @@ taşındı; böylece `/http`'i yalnızca hata sözleşmesi için kullanan projel
 
 | Tüketici | Etkilenir mi | Gereken iş |
 |---|---|---|
-| laputa-backend | **Hayır** | Yok. `createValidator` kullanılmıyor; kendi `shared/utils/validate.ts` dosyası var. `bun run check:consumer` ile doğrulandı: 74 import ifadesi, 38 benzersizi derlendi, uyumlu. |
-| uniclub-backend | **Hayır** | Yok. Core'un vendor kopyasını taşıyor, pakete bağlı değil. |
-| bun-hono-starter | **Bilinmiyor** | `createValidator`'ı `/http`'ten import ediyorsa aşağıdaki tek satırlık değişiklik gerekir. |
+| laputa-backend | Hayır | Yok. `check:consumer` ile doğrulandı. |
+| uniclub-backend | Hayır | Yok — vendor kopya taşıyor, pakete bağlı değil. |
+| bun-hono-starter | Bilinmiyor | `createValidator` kullanıyorsa aşağıdaki tek satır. |
 
-Genel kural: kaynağında `createValidator` **geçmiyorsa** bu sürüm seni
-etkilemiyor.
+Kaynağında `createValidator` **geçmiyorsa** bu sürüm seni etkilemiyor.
 
 ---
 
 ## Yapılacaklar
 
-`createValidator` veya `CreateValidatorOptions` kullanmıyorsan:
-**hiçbir şey yapman gerekmiyor.**
+`createValidator` / `CreateValidatorOptions` kullanmıyorsan: **hiçbir şey.**
 
-Kullanıyorsan import yolunu değiştir (genelde tek dosya — validator bir kez
-kurulur):
+Kullanıyorsan yalnızca import yolu değişir (genelde tek dosya):
 
 ```diff
 - import { createValidator } from "@mustafakurtt/hono-core/http";
 + import { createValidator } from "@mustafakurtt/hono-core/http/validation";
 ```
 
-```diff
-- import type { CreateValidatorOptions } from "@mustafakurtt/hono-core/http";
-+ import type { CreateValidatorOptions } from "@mustafakurtt/hono-core/http/validation";
-```
-
-Aynı dosyada `/http`'ten başka isimler de alıyorsan onları **olduğu yerde
-bırak** — yalnızca doğrulamayla ilgili iki isim taşındı:
-
-```ts
-// doğru sonuç — iki ayrı import
-import { createErrorHandler, NotFoundError } from "@mustafakurtt/hono-core/http";
-import { createValidator } from "@mustafakurtt/hono-core/http/validation";
-```
+Aynı dosyadan aldığın diğer isimler (`createErrorHandler`, `NotFoundError`…)
+`/http`'te kalır — iki ayrı import olur.
 
 ---
 
@@ -54,85 +40,73 @@ import { createValidator } from "@mustafakurtt/hono-core/http/validation";
 
 ### Kırıcı
 
-- **`createValidator` ve `CreateValidatorOptions`, `/http` barrel'ından
-  çıkarıldı**; artık `@mustafakurtt/hono-core/http/validation` alt yolundan
-  gelir. Gerekçe: `/http`'i içe aktaran herkes — sadece `HttpError` ailesi
-  için bile olsa — opsiyonel olması gereken `@hono/zod-validator` peer'ını
-  kurmak zorunda kalıyordu ve peer kurulu değilse **çalışma anında
-  çöküyordu**. (`C-1`)
+- `createValidator` ve `CreateValidatorOptions` → `/http/validation`. `/http`'i
+  yalnızca hata sözleşmesi için içe aktaran projeler artık
+  `@hono/zod-validator` kurmak zorunda değil. (`C-1`)
 
 ### Eklendi
 
-- **`./http/validation` alt yolu.** Peer'ı: `hono`, `zod`,
-  `@hono/zod-validator`.
+- **`createZodErrorMapper`** (`/http`) — `ZodError` → `ValidationError` köprüsü.
+  HTTP kenarından bağımsızdır: `Context` almaz, `@hono/zod-validator`
+  gerektirmez. Şema çalışma anında seçildiğinde (`safeParse` servis katmanında)
+  artık ham `ZodError` 500'e düşmüyor; rotadakiyle **aynı 400 zarfı** üretiliyor.
+  `createValidator` de bu köprüyü kullanır, kural tek yerde durur. (`T-2`)
+- `ProcessSignal` tipi (`/http`).
 
 ### Düzeltildi
 
-- **`/http` artık opsiyonel peer gerektirmiyor.** Yalnızca `hono`+`zod`+`pino`
-  kurulu bir projede doğrulandı: önceden çöküyordu, şimdi 13 export ile
-  yükleniyor.
+- `generatePassword` artık her karakter sınıfından birini gerçekten garanti
+  ediyor. Alfabe indeksleri kaymış olduğu için "büyük harf" yuvası bazen küçük
+  harf, "küçük harf" yuvası bazen rakam üretiyordu (~20.000'de 1 — nadir olduğu
+  için elle fark edilmezdi). (`C-4`)
+- `LocalDiskStorage` iç içe anahtarları destekliyor (`2026/08/a.png`); önceden
+  `ENOENT` veriyordu. (`C-6`)
+- Core artık `NodeJS` ambient namespace'ine bağlı değil. (`C-2`)
+
+### Değişti
+
+- `drizzle-orm` peer aralığına üst sınır: `>=1.0.0-rc.4 <2`. (`C-7`)
+- README: `@types/bun`'ın **zorunlu** olduğu yazıldı. Core kaynak olarak
+  dağıtıldığı için tüketicinin `tsc`'si core'u da derler. (`C-2`)
 
 ### İç (tüketiciyi etkilemez)
 
-- Alt yolların peer sözleşmesi artık **test edilen bir sözleşme**:
-  `tests/dependency-contract.test.ts` her `exports` girişinin import grafiğini
-  çıkarıp bildirilen peer listesine karşı doğruluyor. Bir modül bildirilmemiş
-  bir peer'a uzanırsa CI kırılıyor — bu sınıf hata bir daha tüketiciye ulaşmaz.
-- `bun run check:consumer <yol>` eklendi: bir tüketicinin import yüzeyini
-  **salt-okunur** doğrular (o projeye yazmaz, kurulum yapmaz).
+- Alt yolların peer sözleşmesi artık test ediliyor
+  (`tests/dependency-contract.test.ts`); bir modül bildirilmemiş bir peer'a
+  uzanırsa CI kırılır.
+- `bun run check:consumer <yol>` — bir tüketicinin import yüzeyini salt-okunur
+  doğrular.
+- `shutdown`, `config`, `LocalDiskStorage`, şifre invaryantları ve zod köprüsü
+  için testler eklendi (90 → 144).
 
 ---
 
 ## Doğrulama
 
-Tüketicide:
-
 ```sh
-bun run typecheck     # temiz olmalı
-bun test              # yeşil olmalı
+bun run typecheck
+bun test
 ```
 
-`createValidator` kullanıyorduysan ayrıca doğrulanması gereken: doğrulama
-hatalarının hâlâ aynı zarfla döndüğü (`success: false`, `code`, `details`).
-Taşınan yalnızca import yolu; davranış ve imza **değişmedi**.
-
-Core tarafında (bizde) koşulan kontrol:
-
-```sh
-bun run check:consumer <tüketici-proje-yolu>
-```
+`createValidator` kullanıyorduysan: doğrulama hataları hâlâ aynı zarfla
+dönmeli (`success: false`, `code`, `details`). Taşınan yalnızca import yolu —
+davranış ve imza değişmedi.
 
 ---
 
 ## Dikkat
 
-- **`@hono/zod-validator`'ı `package.json`'dan kaldırma** — `/http/validation`
-  kullanmaya devam ediyorsan hâlâ gerekli. Bu sürüm onu opsiyonel *yapmadı*,
-  yalnızca **gerektirmeyen modülleri ondan kurtardı**.
-- **Kök barrel yok.** `@mustafakurtt/hono-core` diye içe aktarma; her modül
-  kendi alt yolundan gelir.
-- **Sürümü etikete kilitle** (`#v0.2.0`), `main`'e bağlanma. Aksi halde bir
-  sonraki değişiklik habersiz gelir.
-- Bu sürüm henüz **etiketlenmedi**; `package.json` hâlâ `0.1.0`. Etiket
-  atılmadan tüketicileri güncelleme.
-
----
-
-## Bu sürüme henüz girmemiş, planlanan maddeler
-
-Aşağıdakiler v0.2.0 hedefinde ama **henüz yapılmadı** — bu notta karşılıkları
-yok, geldiklerinde eklenecek:
-
-`T-2` zod→HTTP hata köprüsü · `C-4` `generatePassword` karakter sınıfı
-düzeltmesi · `C-6` `LocalDiskStorage` iç içe key desteği · `C-2` doküman ve
-`NodeJS.Signals` bağımlılığının düşürülmesi · `C-7` peer aralığı ·
-`C-8` eksik testler
-
-Ayrıntı: [`../02-yol-haritasi.md`](../02-yol-haritasi.md)
+- **`@hono/zod-validator`'ı kaldırma** — `/http/validation` kullanmaya devam
+  ediyorsan hâlâ gerekli. Bu sürüm onu opsiyonel *yapmadı*, gerektirmeyen
+  modülleri ondan **kurtardı**.
+- Servis katmanında `parse` değil `safeParse` + `createZodErrorMapper` kullan;
+  ham `ZodError` fırlatmak 500'e düşer.
+- Sürümü etikete kilitle (`#v0.2.0`), `main`'e bağlanma.
+- Henüz **etiketlenmedi**; `package.json` hâlâ `0.1.0`.
 
 ---
 
 ## Bağlantılar
 
-- Bulgu kataloğu: [`../01-bulgular.md`](../01-bulgular.md) — `C-1`, `T-6`
-- Yol haritası: [`../02-yol-haritasi.md`](../02-yol-haritasi.md)
+Bulgular: [`../01-bulgular.md`](../01-bulgular.md) — `C-1`, `C-2`, `C-4`, `C-6`,
+`C-7`, `T-2`, `T-6`

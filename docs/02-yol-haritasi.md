@@ -109,23 +109,30 @@ sürüm çıkmadan elle koşulur (bkz. yayın kontrol listesi).
 
 ---
 
-## v0.2.0 — Küçük düzeltmeler + tek kırıcı madde
+## v0.2.0 — Küçük düzeltmeler + tek kırıcı madde · ✅ TAMAMLANDI
 
 > **Revizyon notu:** `C-3` (requestId middleware) bu sürümden **çıkarıldı** —
 > Hono zaten sağlıyor, yerine iki satır doküman. `C-1`'in laputa'ya etkisi
 > **sıfır** çıktı, dolayısıyla bu sürüm pratikte risksiz.
 
-| Madde | İş | Kırıcı? | laputa etkisi |
-|---|---|---|---|
-| ~~`C-1`~~ | ✅ **Yapıldı** — `createValidator` → `./http/validation` | Evet | **Yok** (kullanmıyor) |
-| `T-2` | `badRequestFromZod` köprüsünü ayır — aynı dosya, `C-1` ile birlikte | Hayır | Yok |
-| `C-4` | `generatePassword` karakter sınıfı düzeltmesi + invaryant testi | Hayır | Yok |
-| `C-6` | `LocalDiskStorage` iç içe key desteği | Hayır | Yok |
-| `C-3` | README + JSDoc: "`hono/request-id` ile eşleşir" | Hayır | Yok |
-| `C-2`① | README: `@types/bun` zorunlu | Hayır | Yok |
-| `C-2`② | `NodeJS.Signals` bağımlılığını düşür | Hayır | Yok |
-| `C-7` | `drizzle-orm` peer aralığına üst sınır | Hayır | Yok |
-| `C-8` | `shutdown` + `config` + `validation` testleri | Hayır | Yok |
+Hepsi yapıldı; etiketlenmeyi bekliyor. Tüketiciye bakan özet:
+[`surumler/yayinlanmamis.md`](surumler/yayinlanmamis.md).
+
+| Madde | İş | Kırıcı? |
+|---|---|---|
+| `C-1` | `createValidator` → `./http/validation` | Evet |
+| `T-2` | `createZodErrorMapper` — kenar-bağımsız zod köprüsü | Hayır |
+| `C-4` | `generatePassword` karakter sınıfı + invaryant testi | Hayır |
+| `C-6` | `LocalDiskStorage` iç içe key desteği | Hayır |
+| `C-3` | JSDoc: `hono/request-id` ile eşleşir | Hayır |
+| `C-2` | README `@types/bun`; `NodeJS` ambient bağımlılığı düşürüldü | Hayır |
+| `C-7` | `drizzle-orm` peer aralığına üst sınır | Hayır |
+| `C-8` | `shutdown`, `config`, `LocalDiskStorage`, şifre, zod köprüsü testleri (90 → 144) | Hayır |
+
+`C-8`'de `request-logger` testi hâlâ açık — v0.3'e taşındı.
+
+**Yayın adımı:** `package.json` sürümü `0.2.0`'a çek, `yayinlanmamis.md`'yi
+`v0.2.0.md` yap, etiketle. Bkz. [`surumler/README.md`](surumler/README.md).
 
 **Tüketici göç notu** (gelecek tüketiciler için; laputa'da karşılığı yok):
 

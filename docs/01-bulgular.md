@@ -21,18 +21,18 @@ doğrulandı (`C:\Users\mustafa\Desktop\laputa-projects\laputa-backend`,
 | # | Bulgu | Ağırlık | Kırıcı mı? | Durum |
 |---|---|---|---|---|
 | C-1 | `/http` barrel'ı "opsiyonel" peer'ı zorunlu kılıyor | Yüksek | **Evet** (tek kırıcı madde) | ✅ **ÇÖZÜLDÜ** — laputa'ya etkisi sıfır |
-| C-2 | Kaynak dağıtımı tüketiciye ambient tip bağımlılığı dayatıyor | Orta | Hayır (doküman) | Doğrulandı |
+| C-2 | Kaynak dağıtımı tüketiciye ambient tip bağımlılığı dayatıyor | Orta | Hayır (doküman) | ✅ ÇÖZÜLDÜ |
 | C-3 | ~~`requestId` mekanizması yok~~ → doküman eksiği | **Düşük** | Hayır (doküman) | ⚠️ **Düzeltildi** — Hono zaten sağlıyor |
-| C-4 | `generatePassword` "garantili çeşitlilik" iddiası tutmuyor | Düşük | Hayır (davranış düzeltmesi) | Doğrulandı |
+| C-4 | `generatePassword` "garantili çeşitlilik" iddiası tutmuyor | Düşük | Hayır (davranış düzeltmesi) | ✅ ÇÖZÜLDÜ |
 | C-5 | Modül düzeyi singleton'lar tek-app varsayıyor | Yüksek (mimari) | Hayır (eklemeli) | Doğrulandı |
-| C-6 | `LocalDiskStorage` iç içe key'leri desteklemiyor | Düşük | Hayır (hata düzeltmesi) | Doğrulandı |
-| C-7 | `drizzle-orm` peer tabanı bir rc sürümü | Düşük | Hayır (metadata) | Doğrulandı |
-| C-8 | Beş modülün hiç testi yok | Orta | Hayır | Doğrulandı |
+| C-6 | `LocalDiskStorage` iç içe key'leri desteklemiyor | Düşük | Hayır (hata düzeltmesi) | ✅ ÇÖZÜLDÜ |
+| C-7 | `drizzle-orm` peer tabanı bir rc sürümü | Düşük | Hayır (metadata) | ✅ ÇÖZÜLDÜ |
+| C-8 | Beş modülün hiç testi yok | Orta | Hayır | 🟡 shutdown/config/storage/zod tamam; request-logger açık |
 | **C-9** | **`enforce` kancası claim'leri göremiyor → oturum iptali sığmıyor** | **Yüksek** | Hayır (eklemeli) | 🆕 laputa'da bulundu |
 | **C-10** | **`guard()` izin anahtarı üzerinde generic değil** | Orta | Hayır (eklemeli) | 🆕 laputa'da bulundu |
 | **C-11** | **Sonuç: core'un `guard()`'ı tüketicide ölü kod** | **Yüksek** | — | 🆕 C-5+C-9+C-10'un bileşimi |
 | T-1 | İzin kataloğu ↔ DB senkronu (`db:bootstrap`) yok | Yüksek | Hayır (eklemeli) | ✅ Doğrulandı (231 satır) |
-| T-2 | Çalışma anında şema seçiminde ham `ZodError` → 500 | Yüksek | Hayır (eklemeli) | ✅ Doğrulandı |
+| T-2 | Çalışma anında şema seçiminde ham `ZodError` → 500 | Yüksek | Hayır (eklemeli) | ✅ ÇÖZÜLDÜ |
 | T-3 | `authMiddleware` yalnızca Bearer okuyor | Orta | Hayır (eklemeli) | ✅ Doğrulandı |
 | T-4 | `BaseRepository` bileşik anahtarı / dinamik tabloyu karşılamıyor | **Yüksek** ⬆ | Hayır (eklemeli) | ✅ Doğrulandı — sanılandan **büyük** (11 tablo) |
 | T-5 | Denetim izinin "GET atla" politikası core'a gömülü | Orta | Hayır (eklemeli) | ✅ Doğrulandı |
