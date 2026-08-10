@@ -1,5 +1,5 @@
 import { mkdir, readFile, unlink, writeFile } from "node:fs/promises";
-import { resolve, sep } from "node:path";
+import { dirname, resolve, sep } from "node:path";
 import type { StorageStore, StoredObject } from "../storage.port";
 import { contentTypeForExtension, extensionOf } from "../mime";
 
@@ -13,6 +13,16 @@ import { contentTypeForExtension, extensionOf } from "../mime";
  * katman (media feature) zaten rastgele uuid + beyaz-liste uzantı üretir; bu ikinci
  * savunma hattıdır.
  */
+/**
+ * Dosya sistemi hatalarının taşıdığı kod. `NodeJS.ErrnoException` YERİNE kendi
+ * tipimiz: core kaynak olarak dağıtıldığı için tüketicinin `tsc`'si bu dosyayı
+ * derler ve `NodeJS` ambient namespace'i her zaman elde olmayabilir.
+ */
+type FileSystemError = { code?: string };
+
+/** Dosya/dizin yok. */
+const NOT_FOUND = "ENOENT";
+
 export class LocalDiskStorage implements StorageStore {
   private readonly baseDir: string;
 
@@ -31,7 +41,10 @@ export class LocalDiskStorage implements StorageStore {
 
   async put(key: string, bytes: Uint8Array, _contentType: string): Promise<void> {
     const full = this.safePath(key);
-    await mkdir(this.baseDir, { recursive: true });
+    // Key iç içe olabilir ("2026/08/a.png"): hedefin KENDİ dizini açılır, yalnızca
+    // baseDir değil. S3 gibi adaptörler bu tür key'leri zaten destekler; port
+    // sözleşmesi adaptörler arası aynı kalmalı (Liskov).
+    await mkdir(dirname(full), { recursive: true });
     await writeFile(full, bytes);
   }
 
@@ -40,7 +53,7 @@ export class LocalDiskStorage implements StorageStore {
       const bytes = await readFile(this.safePath(key));
       return { bytes: new Uint8Array(bytes), contentType: contentTypeForExtension(extensionOf(key)) };
     } catch (err) {
-      if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
+      if ((err as FileSystemError).code === NOT_FOUND) return null;
       throw err;
     }
   }
@@ -49,7 +62,7 @@ export class LocalDiskStorage implements StorageStore {
     try {
       await unlink(this.safePath(key));
     } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+      if ((err as FileSystemError).code !== NOT_FOUND) throw err;
     }
   }
 }

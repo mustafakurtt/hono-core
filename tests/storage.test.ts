@@ -59,8 +59,30 @@ for (const [ad, kur] of adaptorler) {
       expect(await store.get("a.png")).toBeNull();
       expect(store.delete("a.png")).resolves.toBeUndefined();
     });
+
+    test("iç içe anahtar desteklenir (tarih bazlı yerleşim)", async () => {
+      // Disk adaptörü eskiden yalnızca baseDir'i açıyordu ve "2026/08/a.png"
+      // ENOENT ile patlıyordu. S3 gibi adaptörler bu key'leri zaten destekler;
+      // sözleşme adaptörler arası aynı kalmalı.
+      const store = kur();
+      await store.put("2026/08/a.png", bytes, "image/png");
+
+      expect(Array.from((await store.get("2026/08/a.png"))!.bytes)).toEqual([1, 2, 3, 4]);
+    });
   });
 }
+
+describe("LocalDiskStorage — yol güvenliği", () => {
+  const bytes = new Uint8Array([1]);
+
+  test("baseDir dışına çıkan anahtar reddedilir", async () => {
+    const store = new LocalDiskStorage(join(tmpRoot, crypto.randomUUID()));
+
+    // İkinci savunma hattı: çağıran katman zaten uuid + beyaz-liste uzantı üretir.
+    expect(store.put("../kacak.png", bytes, "image/png")).rejects.toThrow(/güvensiz/);
+    expect(store.get("../../etc/passwd")).rejects.toThrow(/güvensiz/);
+  });
+});
 
 describe("mime yardımcıları", () => {
   test("extensionOf anahtardan uzantıyı çıkarır", () => {
