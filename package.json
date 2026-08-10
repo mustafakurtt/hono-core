@@ -1,6 +1,6 @@
 {
   "name": "@mustafakurtt/hono-core",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Portable Bun + Hono backend core: RBAC, i18n, cache, HTTP error contract, Drizzle base repository, logger, mail, redis, storage, metrics. Mechanisms only — zero project coupling.",
   "license": "MIT",
   "author": "Mustafa Kurt",

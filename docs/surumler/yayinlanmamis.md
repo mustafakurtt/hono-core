@@ -1,140 +1,69 @@
-# Yayınlanmamış (v0.3.0 hedefi)
+# Yayınlanmamış (v0.4.0 hedefi)
 
-**Tek cümlelik özet:** RBAC/auth zinciri artık kompozisyona açık — kimlik adımı,
-ek politika adımları ve tipli izin anahtarı enjekte edilebiliyor. Mevcut
-`configureRbac` + `guard` kurulumu aynen çalışmaya devam ediyor.
+**Tek cümlelik özet:** <bu sürüm tüketici için ne anlama geliyor?>
 
-**Kırıcı mı:** Hayır — tamamı eklemeli.
+**Kırıcı mı:** Evet / Hayır
 
 ---
 
 ## Etki
 
+Bilinen her tüketici için ayrı satır. "Bilmiyorum" yazmak, boş bırakmaktan iyidir.
+
 | Tüketici | Etkilenir mi | Gereken iş |
 |---|---|---|
-| laputa-backend | Hayır (ama **kazanç var**) | Zorunlu iş yok. İsteğe bağlı sadeleştirme aşağıda. |
-| uniclub-backend | Hayır | Vendor kopya taşıyor. |
-| bun-hono-starter | Hayır | Mevcut kurulum çalışmaya devam eder. |
+| laputa-backend | — | — |
+| uniclub-backend | — | — |
+| bun-hono-starter | — | — |
 
 ---
 
 ## Yapılacaklar
 
-**Zorunlu: hiçbir şey.** Bu sürüm hiçbir mevcut API'yi kaldırmıyor veya
-değiştirmiyor.
+Etkilenen tüketicinin uygulayacağı adımlar, **sırayla ve birebir**. Hiçbir iş
+yoksa: "Hiçbir şey yapman gerekmiyor." yaz.
 
-### İsteğe bağlı: elle kurulmuş guard zincirini sadeleştir
-
-Core'un `guard()`'ı kimlik adımını değiştirmeye, zincire ek adım eklemeye ve
-izin anahtarını tiplemeye izin vermediği için bazı projeler zinciri elle
-kurmuştu. Artık gerekmiyor:
-
-```ts
-// ÖNCESİ — proje kendi auth.middleware'ini + zincirini yazıyordu (~50 satır)
-export function guard(permissionKey: PermissionKey) {
-  return [authMiddleware, attachAuthz, requireCurrentSession,
-          auditTrail(permissionKey), requirePermission(permissionKey)] as const;
-}
-
-// SONRASI — core'un fabrikası
-const auth = createAuth({
-  verify: verifyToken,
-  extract: firstToken(cookieToken(SESSION_COOKIE), bearerToken),
-});
-
-export const { guard } = createRbac<PermissionKey>({
-  auth: auth.middleware,
-  getSubjectId: (user) => user.userId,
-  resolveAuthz: loadAuthz,
-  steps: [requireCurrentSession],
-});
-```
-
-Projenin kendi `auth.middleware.ts`'i (Bearer + çerez okuyan) tamamen
-kaldırılabilir — `firstToken(cookieToken(...), bearerToken)` aynı işi yapar,
-sıra dahil.
-
-Kazanç: `guard()` çağrısı artık **tipli** — var olmayan bir izin anahtarı
-derleme hatası olur.
-
-### İsteğe bağlı: elle düşülen denetim kayıtlarını kaldır
-
-`auditTrail` GET'leri atladığı için kişisel veri döken uçlara elle kayıt
-düşülüyorduysa, artık predikat verilebilir:
-
-```ts
-createRbac({ ..., shouldAudit: (c) => isMutation(c) || c.req.path.endsWith("/export") })
+```diff
+- eski
++ yeni
 ```
 
 ---
 
 ## Değişiklikler
 
+### Kırıcı
+Yok.
+
 ### Eklendi
+Yok.
 
-- **`createAuth({ verify, extract })`** (`/auth`) — kimlik doğrulama fabrikası.
-  Token kaynağı enjekte edilebilir; süreç durumu tutmaz.
-- **`bearerToken` / `cookieToken(ad)` / `firstToken(...)`** (`/auth`) — token
-  kaynakları ve sıralı birleştirici. Çerez YAZMA tarafı bilinçli olarak core'da
-  değil (`secure`/`sameSite`/ömür kararları projeye ait).
-- **`setTokenExtractor(fn)`** (`/auth`) — fabrikaya geçmek istemeyenler için
-  süreç-geneli kısa yol.
-- **`createRbac({ auth, getSubjectId, resolveAuthz, steps, audit, shouldAudit })`**
-  (`/rbac`) — RBAC fabrikası, opsiyonel `Key` generic'i ile tipli izin anahtarı.
-- **`isMutation`, `AuditPredicate`, `AuditTrailOptions`** (`/rbac`) — denetim
-  izinin "hangi istek kaydedilir" politikası artık dışarıdan verilebilir.
-- **`GuardChain`, `GuardStep`, `AuthStep`, `TenantScopedGuardChain`** (`/rbac`) —
-  zincir tipleri dışa açıldı.
-
-### Değişti (geriye uyumlu)
-
-- **`enforce` artık token claim'lerini de görüyor:** `(authz, user) => void`.
-  Tek parametreli mevcut fonksiyonlar aynen çalışır. Oturum sürümü gibi
-  claim-bağımlı kontroller artık bu kancaya sığıyor.
-- **`auditTrail(key, options?)`** — ikinci parametre eklendi (`sink`,
-  `shouldAudit`). Tek parametreli çağrılar değişmedi.
-- Guard zinciri 4 yerine **5 elemanlı**: aralara proje adımlarının katlandığı
-  bir "policy" halkası girdi. Ek adım verilmezse bu halka no-op'tur. Zincir
-  `...guard(key)` ile yayıldığı için çağıran kod değişmez.
+### Düzeltildi
+Yok.
 
 ### İç (tüketiciyi etkilemez)
-
-- `configureRbac` / `setTokenVerifier` artık fabrikaların üzerine kurulu ince
-  birer uyumluluk katmanı. Davranış aynı, tek kaynak tek yerde.
-- `request-logger` testleri eklendi; test edilmeyen modül kalmadı (162 test).
+Yok.
 
 ---
 
 ## Doğrulama
+
+Tüketicide koşulacak komutlar ve beklenen çıktı.
 
 ```sh
 bun run typecheck
 bun test
 ```
 
-Guard zincirinin uzunluğu değiştiği için, rotalarında `c.req.param()` veya
-`c.req.valid()` kullanıyorsan bunların hâlâ tipli olduğunu doğrula —
-`typecheck` temizse zincir arity'si korunmuş demektir.
-
 ---
 
 ## Dikkat
 
-- **Fabrika ile singleton'ı karıştırma.** `createRbac(...)` kendi durumunu
-  taşır; `configureRbac(...)` süreç genelini kurar. Aynı uygulamada ikisini
-  birden kullanmak kafa karıştırır — yeni kodda fabrika tercih edilmeli.
-- **`steps` `attachAuthz`tan SONRA çalışır**, yani `c.get("authz")` doludur ama
-  yetki kontrolü henüz yapılmamıştır. Yetki gerektiren bir kontrolü buraya değil
-  rotaya koy.
-- **Çerez sırası önemli:** `firstToken(cookieToken(...), bearerToken)` — çerez
-  önce. Ters sırada, elle `Bearer` gönderen eski bir istemci güncel çerez
-  oturumunun önüne geçer.
-- Sürümü etikete kilitle (`#v0.3.0`), `main`'e bağlanma.
-- Henüz **etiketlenmedi**; `package.json` hâlâ `0.2.0`.
+Kolay kaçan noktalar, tuzaklar, "şunu yapma" uyarıları. Yoksa "Yok." yaz.
 
 ---
 
 ## Bağlantılar
 
-Bulgular: [`../01-bulgular.md`](../01-bulgular.md) — `C-5`, `C-8`, `C-9`,
-`C-10`, `C-11`, `T-3`, `T-5`
+- Bulgu kataloğu: [`../01-bulgular.md`](../01-bulgular.md) — `C-n` / `T-n`
+- Yol haritası: [`../02-yol-haritasi.md`](../02-yol-haritasi.md)
