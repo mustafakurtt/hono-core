@@ -5,11 +5,14 @@
  * Tasarım: core mekanizmayı sağlar, dili/mesajı/logger'ı proje ENJEKTE eder
  * (createErrorHandler/createResponder hep fabrikadır).
  *
- * DOĞRULAMA BURADA DEĞİL: `createValidator` ayrı bir alt yoldan gelir —
- * `@mustafakurtt/hono-core/http/validation`. Gerekçe: bu barrel'ı hata
+ * DOĞRULAMA MIDDLEWARE'İ BURADA DEĞİL: `createValidator` ayrı bir alt yoldan
+ * gelir — `@mustafakurtt/hono-core/http/validation`. Gerekçe: bu barrel'ı hata
  * sözleşmesi için import eden HER proje, opsiyonel olması gereken
  * `@hono/zod-validator` peer'ını kurmak zorunda kalıyordu. Aynı ilke
  * `RedisCacheStore`'un ioredis'i import etmemesiyle aynı (bkz. cache/stores).
+ *
+ * `createZodErrorMapper` ise BURADADIR: kenar-bağımsızdır, zod'u yalnızca tip
+ * olarak kullanır ve servis katmanındaki `safeParse` için gereklidir.
  */
 export {
   HttpError,
@@ -26,6 +29,14 @@ export {
 
 export { createErrorHandler, type ErrorHandlerOptions } from "./error-handler";
 export { createResponder, type ResponderOptions } from "./respond";
+export {
+  createZodErrorMapper,
+  type CreateZodErrorMapperOptions,
+  type FormattedZodError,
+  type MessageTranslator,
+  type ZodErrorFormatter,
+  type ZodErrorMapper,
+} from "./zod-error";
 export {
   createRequestLogger,
   type RequestLoggerOptions,

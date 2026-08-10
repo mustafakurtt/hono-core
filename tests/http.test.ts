@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { Hono } from "hono";
 import { HTTPException } from "hono/http-exception";
+import { z, type ZodError } from "zod";
 import {
   BadRequestError,
   ConflictError,
@@ -10,7 +11,9 @@ import {
   ValidationError,
   createErrorHandler,
   createResponder,
+  createZodErrorMapper,
   isHttpError,
+  type ZodErrorFormatter,
 } from "../src/http";
 import { createLogger, LogLevel } from "../src/logger";
 import { createTranslator } from "../src/i18n";
@@ -229,5 +232,55 @@ describe("createResponder", () => {
     expect((await (await app.request("/")).json() as { message: string }).message).toBe("Tamam.");
     const en = await app.request("/", { headers: { "X-Locale": "en" } });
     expect((await en.json() as { message: string }).message).toBe("OK.");
+  });
+});
+
+describe("createZodErrorMapper — kenar-bağımsız zod köprüsü", () => {
+  /** Gerçek bir ZodError; köprü zod'u yalnızca TİP olarak kullanır. */
+  const failing = z.object({ title: z.string().min(1) }).safeParse({ title: "" });
+  const zodError = (failing.success ? null : failing.error) as unknown as ZodError;
+
+  const format: ZodErrorFormatter = (error, t) => ({
+    message: t("validation.failed"),
+    details: error.issues.map((issue) => ({ path: issue.path.join("."), code: issue.code })),
+  });
+
+  test("ZodError'u ValidationError'a çevirir (fırlatmaz, döner)", () => {
+    const mapper = createZodErrorMapper({ format });
+    const error = mapper.toValidationError(zodError);
+
+    expect(error).toBeInstanceOf(ValidationError);
+    expect(error.status).toBe(400);
+    expect(error.code).toBe("VALIDATION_ERROR");
+    expect(error.details).toEqual([{ path: "title", code: "too_small" }]);
+  });
+
+  test("translate verilmezse anahtar aynen kalır (geri uyum)", () => {
+    const mapper = createZodErrorMapper({ format });
+    expect(mapper.toValidationError(zodError).message).toBe("validation.failed");
+  });
+
+  test("translate verilirse isteğin diline çevrilir", () => {
+    const catalog = { tr: { "validation.failed": "Doğrulama başarısız." } };
+    const mapper = createZodErrorMapper({ format, translate: createTranslator(catalog, "tr") });
+
+    expect(mapper.toValidationError(zodError, "tr").message).toBe("Doğrulama başarısız.");
+  });
+
+  test("servis katmanından fırlatılınca 400 zarfına düşer — 500 DEĞİL", async () => {
+    // T-2'nin özü: şema çalışma anında seçildiğinde doğrulama servise iner.
+    // Ham ZodError fırlatılsaydı merkezî yakalayıcı onu altyapı hatası sayıp
+    // 500 dönerdi; köprü sayesinde rotadakiyle aynı 400 zarfı üretilir.
+    const mapper = createZodErrorMapper({ format });
+    const app = new Hono();
+    app.onError(createErrorHandler({ logger: silentLogger, fallbackMessage: "server.error" }));
+    app.get("/", () => {
+      throw mapper.toValidationError(zodError);
+    });
+
+    const res = await app.request("/");
+
+    expect(res.status).toBe(400);
+    expect(await res.json()).toMatchObject({ success: false, code: "VALIDATION_ERROR" });
   });
 });
