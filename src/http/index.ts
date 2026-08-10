@@ -1,9 +1,15 @@
 /**
  * core/http barrel — proje-bağımsız HTTP kenar altyapısı: hata sözleşmesi,
- * tek hata çıkışı, doğrulama, yanıt zarfı, istek logu, düzgün kapanma.
+ * tek hata çıkışı, yanıt zarfı, istek logu, düzgün kapanma.
  *
  * Tasarım: core mekanizmayı sağlar, dili/mesajı/logger'ı proje ENJEKTE eder
- * (createErrorHandler/createValidator/createResponder hep fabrikadır).
+ * (createErrorHandler/createResponder hep fabrikadır).
+ *
+ * DOĞRULAMA BURADA DEĞİL: `createValidator` ayrı bir alt yoldan gelir —
+ * `@mustafakurtt/hono-core/http/validation`. Gerekçe: bu barrel'ı hata
+ * sözleşmesi için import eden HER proje, opsiyonel olması gereken
+ * `@hono/zod-validator` peer'ını kurmak zorunda kalıyordu. Aynı ilke
+ * `RedisCacheStore`'un ioredis'i import etmemesiyle aynı (bkz. cache/stores).
  */
 export {
   HttpError,
@@ -19,7 +25,6 @@ export {
 } from "./errors";
 
 export { createErrorHandler, type ErrorHandlerOptions } from "./error-handler";
-export { createValidator, type CreateValidatorOptions } from "./validation";
 export { createResponder, type ResponderOptions } from "./respond";
 export {
   createRequestLogger,

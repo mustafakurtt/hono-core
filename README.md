@@ -44,11 +44,16 @@ Kaynak olarak dağıtılır (build adımı yok) — Bun TypeScript'i doğrudan �
 Her modül kendi alt yolundan import edilir; kök barrel bilinçli olarak **yoktur**
 (modüller arası isim çakışmasını ve kullanılmayan peer'ların yüklenmesini önler).
 
+Aşağıdaki "Peer" sütunu bir vaat değil, **test edilen bir sözleşmedir**: her alt
+yolun import grafiği `tests/dependency-contract.test.ts` tarafından bu tabloya
+karşı doğrulanır. Bir modül bildirilmemiş bir peer'a uzanırsa test kırılır.
+
 | Modül | Ne yapar | Peer |
 |---|---|---|
 | `/auth` | `authMiddleware` (opak claim'ler), `createJwt`, şifre hash'leme | hono |
 | `/rbac` | `guard()` / `guardRole()` zinciri, izin & rol kontrolü, tenant kapsamı, denetim kancası | hono |
-| `/http` | `HttpError` ailesi, merkezi hata yakalayıcı, doğrulama, yanıt zarfı, istek logu, düzgün kapanma | hono, zod |
+| `/http` | `HttpError` ailesi, merkezi hata yakalayıcı, yanıt zarfı, istek logu, düzgün kapanma | hono |
+| `/http/validation` | `createValidator` — zod doğrulamasını tek hata çıkışına bağlar | hono, zod, @hono/zod-validator |
 | `/i18n` | Sıfır-bağımlılıklı çevirmen, katalog parite kilidi, dil çözümleme | hono |
 | `/cache` | `Cache` facade (read-through + single-flight + namespace), memory/redis/null adaptörleri | — |
 | `/ratelimit` | Sabit pencere sınırlayıcı (fail-open), memory/redis adaptörleri | hono |

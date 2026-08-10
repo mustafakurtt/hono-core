@@ -33,6 +33,7 @@
     "./config": "./src/config/index.ts",
     "./db": "./src/db/index.ts",
     "./http": "./src/http/index.ts",
+    "./http/validation": "./src/http/validation.ts",
     "./i18n": "./src/i18n/index.ts",
     "./logger": "./src/logger/index.ts",
     "./mail": "./src/mail/index.ts",
