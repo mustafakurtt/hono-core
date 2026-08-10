@@ -60,7 +60,7 @@ Kırıcı karar verirken bakılacak tablo. Sayılar `grep` ile ölçüldü:
 | `/auth` | 23 | En çok kullanılan. Ama `authMiddleware` **kullanılmıyor** — proje kendi çerez-öncelikli sürümünü yazmış (`T-3`). |
 | `/i18n` | 14 | `defineCatalog` parite kilidi feature başına kullanılıyor. |
 | `/rbac` | 11 | Parçalar kullanılıyor (`attachAuthz`, `requirePermission`, `auditTrail`) ama **`guard()` kullanılmıyor** (`C-11`). |
-| `/db` | 10 | 7 repository `BaseRepository` extend ediyor; 2'si bileşik anahtar yüzünden **edemiyor** (`T-4`). |
+| `/db` | 10 | 7 repository `BaseRepository` extend ediyor. Kullanmayanlardan **yalnızca `settings.repository` bileşik anahtar yüzünden edemiyordu** (`T-4`); diğerleri ilişkisel/analitik sorgular — beklenen. |
 | `/http` | 9 | `createValidator` **kullanılmıyor** → `C-1`'in etkisi sıfır. |
 | `/logger` | 2 | |
 | `/storage` `/redis` `/ratelimit` `/metrics` `/mail` `/config` `/cache` | 1'er | Tesisat; sorunsuz. |

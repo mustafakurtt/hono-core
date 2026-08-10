@@ -15,7 +15,10 @@ dosyalarında kalır; oraya bağlantı verilir, içerik kopyalanmaz.
 |---|---|
 | [`yayinlanmamis.md`](yayinlanmamis.md) | Yayınlanmamış değişiklikler burada **birikir**. Tüketiciye bakan her değişiklikte güncellenir. |
 | `v0.2.0.md`, `v0.3.0.md` … | Sürüm etiketlendiğinde `yayinlanmamis.md` bu ada taşınır, yerine boş bir taslak açılır. |
+| `gecis-<tüketici>-<aralık>.md` | **Geçiş rehberi.** Bir tüketici birden çok sürüm atlayacaksa yazılır: sürüm notları core'un ne değiştiğini, rehber o projede hangi dosyanın ne olacağını anlatır. Tüketici kaynağı okunarak yazılır. |
 | [`SABLON.md`](SABLON.md) | Yeni not yazarken kopyalanacak iskelet. |
+
+Mevcut rehber: [`gecis-laputa-v0.1-v0.4.md`](gecis-laputa-v0.1-v0.4.md).
 
 ## Çalışma kuralı
 

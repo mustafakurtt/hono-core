@@ -582,6 +582,14 @@ i18n'li projede çıkar" tahminimden güçlü: **her RBAC'lı projede de çıkı
 
 **İki senaryoyu ayır — aynı ağırlıkta değiller:**
 
+> ⚠️ **Sonradan düzeltme (v0.4.0 sonrası, laputa kaynağı yeniden okundu):** 11
+> tablo bileşik anahtarlı, ama hepsi `CompositeKeyRepository` adayı DEĞİL. Çeviri
+> tabloları kayıt defteri deseniyle (çalışma anında tablo seçimi) yazılıyor —
+> bilinçli olarak kapsam dışı. RBAC bağ tabloları ise ilişkisel sorgularla
+> okunuyor. Gerçek adaylar: `settings.repository` (net) ve
+> `analytics.rollup.repository` (iyi uyum). Bulgunun yönü doğruydu, **büyüklüğü
+> abartılmıştı**.
+
 - **Bileşik anahtar → net kazanç, yapılmalı.** 11 tablo, iki bağımsız alan
   (i18n + RBAC). `WithId` kısıtı bugün `id: PgColumn` zorunlu tutuyor.
 - **Çalışma anında tablo seçimi → yapılmamalı.** Ajanın kendi önerisi isabetli:
@@ -698,5 +706,5 @@ kurtardı**.
 |---|---|---|---|
 | `C-1` | "tek kırıcı madde, dikkat" | etkisi **sıfır** | tüketici `createValidator` kullanmıyor |
 | `C-3` | "eksik mekanizma, orta" | **doküman satırı** | Hono zaten sağlıyor |
-| `T-4` | "iki tablo, orta" | **11 tablo, yüksek** | RBAC join tabloları da dahil |
+| `T-4` | "iki tablo, orta" | 11 tablo bileşik anahtarlı, **2'si gerçek aday** | Çoğu kayıt defteri/ilişkisel desende — kapsam dışı |
 | `T-7` | "yüksek risk" | **zaten çözülmüş** | `#v0.1.0` kilitli |
