@@ -29,7 +29,7 @@ düzenlemezsin — sadece farklı şeyler enjekte edersin.
 ## Kurulum
 
 ```sh
-bun add github:mustafakurtt/hono-core#v0.1.0
+bun add github:mustafakurtt/hono-core#v0.2.0
 ```
 
 Peer bağımlılıklar isteğe bağlıdır: yalnızca kullandığın modülünkini kurarsın.
