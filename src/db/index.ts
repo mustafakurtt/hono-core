@@ -13,4 +13,11 @@ export {
   type BaseRepositoryOptions,
 } from "./base.repository";
 
+export {
+  CompositeKeyRepository,
+  type CompositeKey,
+  type CompositeWhere,
+  type CompositeKeyRepositoryOptions,
+} from "./composite.repository";
+
 export { uuidPrimaryKey, timestamps, softDeleteColumn } from "./base.entity";
