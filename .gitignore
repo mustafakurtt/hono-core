@@ -6,3 +6,5 @@ node_modules/
 !.env.example
 coverage/
 dist/
+# check:consumer'ın geçici derleme alanı (normalde kendini siler)
+.surface-check/
