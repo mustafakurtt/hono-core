@@ -1,15 +1,11 @@
 import { and, desc, eq, lt, sql, type InferInsertModel, type InferSelectModel, type SQL } from "drizzle-orm";
-import type { PgAsyncDatabase, PgColumn, PgTable } from "drizzle-orm/pg-core";
-import {
-  aliveFilter,
-  buildEqualityFilter,
-  requireScopedFilter,
-  resolveDeletedAt,
-  withAliveFilter,
-  type ReadOptions,
-} from "./query-filters";
+import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
+import { PgRepository } from "./pg-repository";
+import type { ReadOptions } from "./query-filters";
+import type { Database, IdOf, WithId } from "./types";
 
 export type { ReadOptions };
+export type { Database, IdOf, WithId };
 
 /**
  * ⚠️ Drizzle + PostgreSQL'e ÖZGÜ modül. core/'un tek DB/ORM-bağımlı parçası
@@ -21,12 +17,6 @@ export type { ReadOptions };
  * repo'ları bunu EXTEND eder; mekanik işleri buradan alır, yalnızca özel/ilişkisel
  * sorgularını yazar (protected `query` ile tam tipli).
  */
-
-/** Drizzle veritabanı örneği (driver-agnostik: postgres-js, node-postgres...). */
-export type Database = PgAsyncDatabase<any, any>;
-
-export type WithId = PgTable & { id: PgColumn };
-export type IdOf<TTable extends WithId> = InferSelectModel<TTable>["id"];
 
 /**
  * Bir tablonun kolonlarından oluşan basit eşitlik filtresi. `null` verilirse
@@ -60,20 +50,13 @@ export interface KeysetOptions<TTable extends WithId> extends ReadOptions {
   limit: number;
 }
 
-export class BaseRepository<TTable extends WithId, TQuery = unknown> {
-  protected readonly softDelete: boolean;
+export class BaseRepository<TTable extends WithId, TQuery = unknown> extends PgRepository<TTable> {
   /** Alt sınıfların tam tipli ilişkisel sorgular çalıştırması için (db.query.<table>). */
   protected readonly query?: TQuery;
-  private readonly deletedAt?: PgColumn;
 
-  constructor(
-    protected readonly db: Database,
-    protected readonly table: TTable,
-    options: BaseRepositoryOptions<TQuery> = {}
-  ) {
-    this.softDelete = options.softDelete ?? false;
+  constructor(db: Database, table: TTable, options: BaseRepositoryOptions<TQuery> = {}) {
+    super(db, table, "BaseRepository", options.softDelete ?? false);
     this.query = options.query;
-    this.deletedAt = resolveDeletedAt(this.table as PgTable, this.softDelete, "BaseRepository");
   }
 
   // ── Yazma ──────────────────────────────────────────────────────────────
@@ -104,15 +87,7 @@ export class BaseRepository<TTable extends WithId, TQuery = unknown> {
    * etkilendiyse true. (Zaten yumuşak silinmiş kayıt tekrar "silinir"se yine true.)
    */
   async deleteById(id: IdOf<TTable>): Promise<boolean> {
-    if (this.softDelete) {
-      const rows = (await this.db
-        .update(this.table)
-        .set({ deletedAt: new Date() } as any)
-        .where(eq(this.table.id, id))
-        .returning()) as unknown[];
-      return rows.length > 0;
-    }
-    return this.hardDeleteById(id);
+    return (await this.deleteMatching(eq(this.table.id, id))) > 0;
   }
 
   /** softDelete ayarından BAĞIMSIZ olarak kaydı fiziksel siler. */
@@ -137,36 +112,23 @@ export class BaseRepository<TTable extends WithId, TQuery = unknown> {
     const rows = (await this.db
       .select()
       .from(this.table as PgTable)
-      .where(this.scopedWhere(eq(this.table.id, id), options))
+      .where(this.scoped(eq(this.table.id, id), options))
       .limit(1)) as InferSelectModel<TTable>[];
     return rows[0];
   }
 
   async findAll(options?: ReadOptions & { limit?: number; offset?: number }): Promise<InferSelectModel<TTable>[]> {
     let query = this.db.select().from(this.table as PgTable).$dynamic();
-    const alive = this.aliveFilter(options);
+    const alive = this.aliveOnly(options);
     if (alive) query = query.where(alive);
-    if (options?.limit !== undefined) query = query.limit(options.limit);
-    if (options?.offset !== undefined) query = query.offset(options.offset);
-    return (await query) as InferSelectModel<TTable>[];
-  }
-
-  async count(options?: ReadOptions): Promise<number> {
-    let query = this.db
-      .select({ value: sql<number>`cast(count(*) as int)` })
-      .from(this.table as PgTable)
-      .$dynamic();
-    const alive = this.aliveFilter(options);
-    if (alive) query = query.where(alive);
-    const rows = (await query) as { value: number }[];
-    return rows[0]?.value ?? 0;
+    return (await this.applyRange(query, options)) as InferSelectModel<TTable>[];
   }
 
   async existsById(id: IdOf<TTable>, options?: ReadOptions): Promise<boolean> {
     const rows = (await this.db
       .select({ one: sql<number>`1` })
       .from(this.table as PgTable)
-      .where(this.scopedWhere(eq(this.table.id, id), options))
+      .where(this.scoped(eq(this.table.id, id), options))
       .limit(1)) as unknown[];
     return rows.length > 0;
   }
@@ -181,7 +143,7 @@ export class BaseRepository<TTable extends WithId, TQuery = unknown> {
     const rows = (await this.db
       .select()
       .from(this.table as PgTable)
-      .where(this.scopedWhere(this.buildWhere(where), options))
+      .where(this.scoped(this.buildWhere(where), options))
       .limit(1)) as InferSelectModel<TTable>[];
     return rows[0];
   }
@@ -194,11 +156,9 @@ export class BaseRepository<TTable extends WithId, TQuery = unknown> {
     let query = this.db
       .select()
       .from(this.table as PgTable)
-      .where(this.scopedWhere(this.buildWhere(where), options))
+      .where(this.scoped(this.buildWhere(where), options))
       .$dynamic();
-    if (options?.limit !== undefined) query = query.limit(options.limit);
-    if (options?.offset !== undefined) query = query.offset(options.offset);
-    return (await query) as InferSelectModel<TTable>[];
+    return (await this.applyRange(query, options)) as InferSelectModel<TTable>[];
   }
 
   /** Basit eşitlik filtresiyle en az bir satır var mı? */
@@ -206,7 +166,7 @@ export class BaseRepository<TTable extends WithId, TQuery = unknown> {
     const rows = (await this.db
       .select({ one: sql<number>`1` })
       .from(this.table as PgTable)
-      .where(this.scopedWhere(this.buildWhere(where), options))
+      .where(this.scoped(this.buildWhere(where), options))
       .limit(1)) as unknown[];
     return rows.length > 0;
   }
@@ -222,7 +182,7 @@ export class BaseRepository<TTable extends WithId, TQuery = unknown> {
     const base = options.where ? this.buildWhere(options.where) : undefined;
     if (base) filters.push(base);
     if (options.cursor !== undefined) filters.push(lt(options.cursorColumn, options.cursor));
-    const alive = this.aliveFilter(options);
+    const alive = this.aliveOnly(options);
     if (alive) filters.push(alive);
 
     let query = this.db.select().from(this.table as PgTable).$dynamic();
@@ -253,17 +213,7 @@ export class BaseRepository<TTable extends WithId, TQuery = unknown> {
    * ayarına saygı duyar (soft: deletedAt=now; aksi halde fiziksel). Etkilenen satır sayısı.
    */
   async deleteWhere(where: WhereFilter<TTable>): Promise<number> {
-    const condition = this.requireScopedWhere(where, "deleteWhere");
-    if (this.softDelete) {
-      const rows = (await this.db
-        .update(this.table)
-        .set({ deletedAt: new Date() } as any)
-        .where(condition)
-        .returning()) as unknown[];
-      return rows.length;
-    }
-    const rows = (await this.db.delete(this.table).where(condition).returning()) as unknown[];
-    return rows.length;
+    return this.deleteMatching(this.requireScopedWhere(where, "deleteWhere"));
   }
 
   // ── Transaction ──────────────────────────────────────────────────────────
@@ -285,22 +235,14 @@ export class BaseRepository<TTable extends WithId, TQuery = unknown> {
   }
 
   // ── Yardımcılar ────────────────────────────────────────────────────────
-  // Filtre kurma kuralları `query-filters.ts`te; `CompositeKeyRepository` ile
-  // paylaşılır (undefined reddi, bilinmeyen kolon hatası, boş filtre koruması).
-  private aliveFilter(options?: ReadOptions): SQL | undefined {
-    return aliveFilter(this.deletedAt, options);
-  }
-
-  private scopedWhere(condition: SQL, options?: ReadOptions): SQL {
-    return withAliveFilter(condition, this.deletedAt, options);
-  }
-
+  // Canlılık/filtre/silme semantiği ortak tabandadır (`pg-repository.ts`);
+  // burada yalnızca bu sınıfa özgü isimlendirme ve kontroller kalır.
   private buildWhere(where: WhereFilter<TTable>): SQL {
-    return buildEqualityFilter(this.table as PgTable, where, "BaseRepository.buildWhere");
+    return this.filterOf(where, "buildWhere");
   }
 
   private requireScopedWhere(where: WhereFilter<TTable>, method: string): SQL {
-    return requireScopedFilter(this.table as PgTable, where, `BaseRepository.${method}`);
+    return this.requiredFilterOf(where, method);
   }
 
   private assertSoftDelete(method: string) {

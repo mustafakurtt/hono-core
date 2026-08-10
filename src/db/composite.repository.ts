@@ -1,15 +1,8 @@
 import { sql, type InferInsertModel, type InferSelectModel, type SQL } from "drizzle-orm";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
-import type { Database } from "./base.repository";
-import {
-  buildEqualityFilter,
-  requireScopedFilter,
-  resolveColumn,
-  resolveDeletedAt,
-  withAliveFilter,
-  aliveFilter,
-  type ReadOptions,
-} from "./query-filters";
+import { PgRepository } from "./pg-repository";
+import { buildEqualityFilter, resolveColumn, type ReadOptions } from "./query-filters";
+import type { Database } from "./types";
 
 /**
  * ⚠️ Drizzle + PostgreSQL'e ÖZGÜ modül (base.repository ile aynı ailede).
@@ -60,35 +53,33 @@ export class CompositeKeyRepository<
   TTable extends PgTable,
   TKey extends keyof InferSelectModel<TTable> & string,
   TQuery = unknown,
-> {
-  protected readonly softDelete: boolean;
+> extends PgRepository<TTable> {
   protected readonly query?: TQuery;
   private readonly keyColumns: readonly TKey[];
   private readonly keyNames: ReadonlySet<string>;
-  private readonly deletedAt?: PgColumn;
   private readonly updatedAt?: PgColumn;
 
   constructor(
-    protected readonly db: Database,
-    protected readonly table: TTable,
+    db: Database,
+    table: TTable,
     options: CompositeKeyRepositoryOptions<TTable, TKey, TQuery>
   ) {
     if (options.keyColumns.length === 0) {
       throw new Error("CompositeKeyRepository: keyColumns boş olamaz.");
     }
+    super(db, table, "CompositeKeyRepository", options.softDelete ?? false);
+
     this.keyColumns = options.keyColumns;
     this.keyNames = new Set(options.keyColumns);
-    this.softDelete = options.softDelete ?? false;
     this.query = options.query;
-    this.deletedAt = resolveDeletedAt(this.table, this.softDelete, "CompositeKeyRepository");
     // Kolon varsa upsert onu tazeler (aşağıya bkz.); yoksa sessizce atlanır.
-    this.updatedAt = (this.table as unknown as Record<string, unknown>)[UPDATED_AT] as
+    this.updatedAt = (table as unknown as Record<string, unknown>)[UPDATED_AT] as
       | PgColumn
       | undefined;
 
     // Anahtar adları açılışta doğrulanır — yazım hatası ilk sorguya kadar beklemesin.
     for (const name of this.keyColumns) {
-      resolveColumn(this.table, name, "CompositeKeyRepository");
+      resolveColumn(table, name, "CompositeKeyRepository");
     }
   }
 
@@ -149,9 +140,7 @@ export class CompositeKeyRepository<
 
   /** Eşitlik filtresine uyan satırları siler. Boş filtre ENGELLENİR. */
   async deleteWhere(where: CompositeWhere<TTable>): Promise<number> {
-    return this.deleteMatching(
-      requireScopedFilter(this.table, where, "CompositeKeyRepository.deleteWhere")
-    );
+    return this.deleteMatching(this.requiredFilterOf(where, "deleteWhere"));
   }
 
   // ── Okuma ──────────────────────────────────────────────────────────────
@@ -162,7 +151,7 @@ export class CompositeKeyRepository<
     const rows = (await this.db
       .select()
       .from(this.table as PgTable)
-      .where(withAliveFilter(this.keyFilter(key), this.deletedAt, options))
+      .where(this.scoped(this.keyFilter(key), options))
       .limit(1)) as InferSelectModel<TTable>[];
     return rows[0];
   }
@@ -171,7 +160,7 @@ export class CompositeKeyRepository<
     const rows = (await this.db
       .select({ one: sql<number>`1` })
       .from(this.table as PgTable)
-      .where(withAliveFilter(this.keyFilter(key), this.deletedAt, options))
+      .where(this.scoped(this.keyFilter(key), options))
       .limit(1)) as unknown[];
     return rows.length > 0;
   }
@@ -181,31 +170,12 @@ export class CompositeKeyRepository<
     where: CompositeWhere<TTable> = {},
     options?: ReadOptions & { limit?: number; offset?: number }
   ): Promise<InferSelectModel<TTable>[]> {
-    const condition = buildEqualityFilter(
-      this.table,
-      where,
-      "CompositeKeyRepository.findMany"
-    );
-
-    let query = this.db
+    const query = this.db
       .select()
       .from(this.table as PgTable)
-      .where(withAliveFilter(condition, this.deletedAt, options))
+      .where(this.scoped(this.filterOf(where, "findMany"), options))
       .$dynamic();
-    if (options?.limit !== undefined) query = query.limit(options.limit);
-    if (options?.offset !== undefined) query = query.offset(options.offset);
-    return (await query) as InferSelectModel<TTable>[];
-  }
-
-  async count(options?: ReadOptions): Promise<number> {
-    let query = this.db
-      .select({ value: sql<number>`cast(count(*) as int)` })
-      .from(this.table as PgTable)
-      .$dynamic();
-    const alive = aliveFilter(this.deletedAt, options);
-    if (alive) query = query.where(alive);
-    const rows = (await query) as { value: number }[];
-    return rows[0]?.value ?? 0;
+    return (await this.applyRange(query, options)) as InferSelectModel<TTable>[];
   }
 
   // ── Transaction ────────────────────────────────────────────────────────
@@ -277,19 +247,5 @@ export class CompositeKeyRepository<
   /** TS alan adından gerçek SQL kolon adına. */
   private columnName(field: string): string {
     return resolveColumn(this.table, field, "CompositeKeyRepository").name;
-  }
-
-  /** softDelete'e saygı duyarak siler; etkilenen satır sayısını döner. */
-  private async deleteMatching(condition: SQL): Promise<number> {
-    if (this.softDelete) {
-      const rows = (await this.db
-        .update(this.table)
-        .set({ deletedAt: new Date() } as any)
-        .where(condition)
-        .returning()) as unknown[];
-      return rows.length;
-    }
-    const rows = (await this.db.delete(this.table).where(condition).returning()) as unknown[];
-    return rows.length;
   }
 }
