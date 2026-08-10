@@ -12,24 +12,38 @@ export const verifyPassword = async (password: string, hash: string): Promise<bo
   await Bun.password.verify(password, hash);
 
 /**
+ * Karakter sınıfları. Karıştırılabilir karakterler (I/O/l/0/1) bilinçli olarak
+ * DIŞARIDA: geçici şifre çoğu zaman elle okunup yazılır.
+ *
+ * Sınıflar AYRI sabitler olarak durur; tek bir alfabe içinde ofsetle
+ * indekslemek (`alphabet[26 + n]`) sınıf sınırlarının kaymasına ve "garantili"
+ * denen çeşitliliğin sessizce bozulmasına yol açıyordu.
+ */
+const UPPERCASE = "ABCDEFGHJKLMNPQRSTUVWXYZ";
+const LOWERCASE = "abcdefghijkmnopqrstuvwxyz";
+const DIGITS = "23456789";
+const SYMBOLS = "!@#$%&*?";
+const ALPHABET = UPPERCASE + LOWERCASE + DIGITS;
+
+/** Her sınıftan birer karakter garanti edildiği için asgari uzunluk bu kadardır. */
+const GUARANTEED_CLASSES = [UPPERCASE, LOWERCASE, DIGITS, SYMBOLS] as const;
+const MINIMUM_LENGTH = GUARANTEED_CLASSES.length * 2;
+
+/** `byte`'ı bir alfabenin indeksine indirger. */
+const pick = (alphabet: string, byte: number): string => alphabet[byte % alphabet.length];
+
+/**
  * Kriptografik olarak güçlü, okunabilir geçici şifre üretir (örn. admin şifre
- * sıfırlaması). Büyük/küçük harf + rakam + sembol içerir; kalanı rastgeledir.
- * Amaç tek kullanımlık geçici şifredir — kullanıcı ilk girişte değiştirir.
+ * sıfırlaması). İlk dört karakter her sınıftan birini GARANTİ eder — çoğu şifre
+ * politikası bunu şart koşar — kalanı rastgeledir. Amaç tek kullanımlık geçici
+ * şifredir; kullanıcı ilk girişte değiştirir.
  */
 export const generatePassword = (length = 16): string => {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
-  const symbols = "!@#$%&*?";
-  // Alt sınır 8: 4 karakter garantili prefix'e ayrıldığı için daha kısa istenirse
-  // `length - 4` negatife düşer (subarray sondan sayar → yanlış uzunluk). Geçici
-  // şifre zaten ≥8 olmalı.
-  const size = Math.max(length, 8);
+  const size = Math.max(length, MINIMUM_LENGTH);
   const bytes = crypto.getRandomValues(new Uint8Array(size));
-  const body = Array.from(bytes.subarray(0, size - 4), (b) => alphabet[b % alphabet.length]).join("");
-  // İlk 4 karakter garantili çeşitlilik (bir çok politikanın istediği sınıflar).
-  const prefix =
-    alphabet[bytes[0] % 26] + // büyük
-    alphabet[26 + (bytes[1] % 26)] + // küçük
-    "23456789"[bytes[2] % 8] + // rakam
-    symbols[bytes[3] % symbols.length]; // sembol
+
+  const prefix = GUARANTEED_CLASSES.map((alphabet, index) => pick(alphabet, bytes[index])).join("");
+  const body = Array.from(bytes.subarray(prefix.length), (byte) => pick(ALPHABET, byte)).join("");
+
   return prefix + body;
 };

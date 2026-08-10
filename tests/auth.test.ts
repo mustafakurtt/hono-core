@@ -77,4 +77,29 @@ describe("password", () => {
     const gecici = generatePassword();
     expect(await verifyPassword(gecici, await hashPassword(gecici))).toBe(true);
   });
+
+  test("her karakter sınıfından en az biri GARANTİ", () => {
+    // Eskiden tek alfabede ofsetle indekslendiği için "büyük harf" yuvası
+    // bazen küçük harf, "küçük harf" yuvası bazen rakam üretiyordu (~20.000'de
+    // 1). Nadir olduğu için elle fark edilmezdi; bu döngü invaryantı kilitler.
+    for (let i = 0; i < 2_000; i++) {
+      const password = generatePassword(12);
+      expect(password).toMatch(/[A-Z]/);
+      expect(password).toMatch(/[a-z]/);
+      expect(password).toMatch(/[0-9]/);
+      expect(password).toMatch(/[!@#$%&*?]/);
+    }
+  });
+
+  test("karıştırılabilir karakterler (I O l 0 1) kullanılmaz", () => {
+    // Geçici şifre çoğu zaman elle okunup yazılır.
+    for (let i = 0; i < 500; i++) {
+      expect(generatePassword(20)).not.toMatch(/[IOl01]/);
+    }
+  });
+
+  test("istenen uzunluk asgarinin altındaysa asgariye yükseltilir", () => {
+    // 4 karakter garantili önek + gövde; daha kısası sınıf garantisini bozardı.
+    expect(generatePassword(2).length).toBeGreaterThanOrEqual(8);
+  });
 });
