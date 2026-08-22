@@ -39,7 +39,7 @@ doğrulandı (`C:\Users\mustafa\Desktop\laputa-projects\laputa-backend`,
 | T-6 | Core CI'ında tüketici duman testi yok | Yüksek (süreç) | — | ✅ **ÇÖZÜLDÜ** (Katman A + B) |
 | T-7 | Tüketicilerde core sürümü kilitli değil | ~~Yüksek~~ | — | ✅ **Zaten çözülmüş** (`#v0.1.0`) |
 | T-8 | uniclub-backend ayrışmış vendor kopya taşıyor | Yüksek (süreç) | — | Karar bekliyor |
-| T-9 | Tüketici daha katı `tsconfig` ile core'u derleyemiyor | Yüksek | Hayır (iç düzeltme) | ✅ ÇÖZÜLDÜ (v0.4.1) |
+| T-9 | Tüketici daha katı `tsconfig` ile core'u derleyemiyor | Yüksek | Hayır (iç düzeltme) | ✅ ÇÖZÜLDÜ (v0.4.1 + v0.4.2) |
 
 ---
 
@@ -704,6 +704,11 @@ sessizce geri gelmesin. İki yer davranış düzeltmesi de içeriyor:
   (önce yalnız hata alanı kontrol ediliyordu; eksik dizi sessizce `undefined`di).
 - `db/base.repository.create` — `INSERT … RETURNING` satır döndürmezse artık
   açık invaryant hatası; önce `undefined` "satır" olarak dönüyordu.
+
+**İkinci tur (v0.4.2):** aynı tüketici `verbatimModuleSyntax` açtığında üç
+`TS1484` daha çıktı (`auth/auth.middleware`, `rbac/tenant-scope`). Bayrak da
+core'un `tsconfig`'ine eklendi. İlk turda **tek bayrak** kapatılmıştı; ders bir
+bayrak değil, **bayrak kümesi** hakkındaydı.
 
 **Ders:** "tüketiciden daha katıyım" iddiası ölçülmediği sürece bir temennidir.
 Ölçüsü: en katı tüketicinin bayrak kümesiyle derlenmek.

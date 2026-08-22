@@ -15,8 +15,9 @@
     // Kütüphane olduğu için tüketici projelerden daha katı:
     // kullanılmayan kod ve eksik return'ler pakete sızmasın.
     "noUnusedLocals": true,
-    // T-9: tüketici bu bayrakla derleyebilsin diye core da onunla derlenir.
+    // T-9: tüketici bu bayraklarla derleyebilsin diye core da onlarla derlenir.
     "noUncheckedIndexedAccess": true,
+    "verbatimModuleSyntax": true,
     "noUnusedParameters": true,
     "noImplicitReturns": true,
     "noFallthroughCasesInSwitch": true

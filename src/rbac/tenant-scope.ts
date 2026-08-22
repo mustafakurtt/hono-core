@@ -1,5 +1,5 @@
-import { Context, Next } from "hono";
-import { AuthClaims } from "../auth/auth.middleware";
+import type { Context, Next } from "hono";
+import type { AuthClaims } from "../auth/auth.middleware";
 import { ForbiddenError } from "../http/errors";
 import type { AuthzContext, RbacVariables } from "./rbac.types";
 

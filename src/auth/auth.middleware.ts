@@ -1,4 +1,4 @@
-import { Context, Next } from "hono";
+import type { Context, Next } from "hono";
 import { createAuth, type TokenVerifier } from "./auth.factory";
 import { bearerToken, type TokenExtractor } from "./token-source";
 
