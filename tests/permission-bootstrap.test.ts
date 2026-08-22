@@ -42,7 +42,7 @@ function memoryStore() {
     },
     async listRolePermissions() {
       return [...links].map((raw) => {
-        const [role, permission] = raw.split("|");
+        const [role = "", permission = ""] = raw.split("|");
         return { role, permission };
       });
     },

@@ -51,7 +51,7 @@ export function packageNameOf(specifier: string): string {
   const segments = specifier.split(PATH_SEPARATOR);
   return specifier.startsWith(SCOPE_PREFIX)
     ? segments.slice(0, 2).join(PATH_SEPARATOR)
-    : segments[0];
+    : (segments[0] ?? "");
 }
 
 /**

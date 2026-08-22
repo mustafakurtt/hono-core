@@ -42,8 +42,8 @@ describe("createRequestLogger", () => {
     await app.request("/ok");
 
     expect(lines).toHaveLength(1);
-    expect(lines[0].fields).toMatchObject({ method: "GET", path: "/ok", status: 200 });
-    expect(lines[0].fields.durationMs).toBeGreaterThanOrEqual(0);
+    expect(lines[0]!.fields).toMatchObject({ method: "GET", path: "/ok", status: 200 });
+    expect(lines[0]!.fields.durationMs).toBeGreaterThanOrEqual(0);
   });
 
   test("status → seviye: 5xx error, 4xx warn, diğeri info", async () => {
@@ -67,7 +67,7 @@ describe("createRequestLogger", () => {
     const { app, lines } = buildApp({ getExtraFields: () => ({ tenant: "acme" }) });
     await app.request("/ok");
 
-    expect(lines[0].fields).toMatchObject({ tenant: "acme" });
+    expect(lines[0]!.fields).toMatchObject({ tenant: "acme" });
   });
 
   test("requestId okuma yolu ve mesaj enjekte edilebilir", async () => {
@@ -77,14 +77,14 @@ describe("createRequestLogger", () => {
     });
     await app.request("/yok");
 
-    expect(lines[0].fields.requestId).toBe("req-1");
-    expect(lines[0].message).toBe("seviye:warn");
+    expect(lines[0]!.fields.requestId).toBe("req-1");
+    expect(lines[0]!.message).toBe("seviye:warn");
   });
 
   test("seviye eşlemesi override edilebilir", async () => {
     const { app, lines } = buildApp({ getLevel: () => LogLevel.Debug });
     await app.request("/patlak");
 
-    expect(lines[0].level).toBe(LogLevel.Debug);
+    expect(lines[0]!.level).toBe(LogLevel.Debug);
   });
 });

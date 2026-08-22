@@ -105,7 +105,7 @@ function toDiagnostics(
     .filter((line) => line.length > 0)
     .map((line) => {
       const parsed = TSC_LINE.exec(line);
-      const index = parsed ? statementIndexOf(parsed[1]) : null;
+      const index = parsed ? statementIndexOf(parsed[1] ?? "") : null;
       if (index === null || !statements[index]) {
         return { message: line, statement: "", usedBy: [] };
       }

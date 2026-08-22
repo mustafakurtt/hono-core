@@ -39,6 +39,7 @@ doğrulandı (`C:\Users\mustafa\Desktop\laputa-projects\laputa-backend`,
 | T-6 | Core CI'ında tüketici duman testi yok | Yüksek (süreç) | — | ✅ **ÇÖZÜLDÜ** (Katman A + B) |
 | T-7 | Tüketicilerde core sürümü kilitli değil | ~~Yüksek~~ | — | ✅ **Zaten çözülmüş** (`#v0.1.0`) |
 | T-8 | uniclub-backend ayrışmış vendor kopya taşıyor | Yüksek (süreç) | — | Karar bekliyor |
+| T-9 | Tüketici daha katı `tsconfig` ile core'u derleyemiyor | Yüksek | Hayır (iç düzeltme) | ✅ ÇÖZÜLDÜ (v0.4.1) |
 
 ---
 
@@ -673,6 +674,39 @@ taşımayı unutursun — ki `T-1`'de tam olarak bu olmuş (uniclub senkron soru
 farklı ve daha kötü çözmüş, o bilgi core'a akmamış).
 
 **Karar verilmeli, ertelenmemeli.** İkinci seçenek bile üçüncüsünden iyidir.
+
+---
+
+## T-9 · Tüketici daha katı `tsconfig` ile core'u derleyemiyor · ✅ DOĞRULANDI
+
+**Rapor (DioramaTrade, 2026-08-22):** Tüketici `tsconfig`'inde
+`noUncheckedIndexedAccess: true` açıkken `bun run typecheck` **core'un kaynağında**
+kırılıyor:
+
+```
+node_modules/.../hono-core/src/i18n/translator.ts(65,37): error TS2769 …
+```
+
+**Doğrulama (core deposunda):** `tsc --noEmit --noUncheckedIndexedAccess` →
+**29 hata** (12'si `src/`, kalanı `tests/` + `scripts/`).
+
+**Kök neden:** core **kaynak olarak** dağıtılıyor (bkz. `C-2`), yani derleyen
+taraf tüketicidir. Core'un kendi `tsconfig`'i "tüketiciden daha katı" olmakla
+övünüyordu ama bu bayrağı içermiyordu; dolayısıyla core, **kendisinden daha katı
+bir tüketiciyi derleyemez** durumdaydı. Kaynak dağıtımının bedeli budur:
+tüketicinin bayrak kümesi core'un sözleşmesinin parçasıdır.
+
+**Çözüm (v0.4.1):** 12 `src/` erişimi güvenli hâle getirildi ve
+`noUncheckedIndexedAccess` core'un **kendi** `tsconfig`'ine eklendi — bir daha
+sessizce geri gelmesin. İki yer davranış düzeltmesi de içeriyor:
+
+- `ratelimit/redis.store` — pipeline **eksik** sonuç döndürdüğünde artık fırlatıyor
+  (önce yalnız hata alanı kontrol ediliyordu; eksik dizi sessizce `undefined`di).
+- `db/base.repository.create` — `INSERT … RETURNING` satır döndürmezse artık
+  açık invaryant hatası; önce `undefined` "satır" olarak dönüyordu.
+
+**Ders:** "tüketiciden daha katıyım" iddiası ölçülmediği sürece bir temennidir.
+Ölçüsü: en katı tüketicinin bayrak kümesiyle derlenmek.
 
 ---
 

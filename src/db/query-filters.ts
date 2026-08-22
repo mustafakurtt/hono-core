@@ -48,7 +48,8 @@ export function buildEqualityFilter(
   }
 
   if (conditions.length === 0) return sql`1 = 1`;
-  return conditions.length === 1 ? conditions[0] : (and(...conditions) as SQL);
+  const [only] = conditions;
+  return only && conditions.length === 1 ? only : (and(...conditions) as SQL);
 }
 
 /**

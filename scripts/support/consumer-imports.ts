@@ -61,7 +61,7 @@ export async function collectConsumerImports(
 
     const source = await Bun.file(file).text();
     for (const match of source.matchAll(pattern)) {
-      const [statement, specifier] = match;
+      const [statement = "", specifier = ""] = match;
       found.push({
         statement: statement.trim(),
         subpath: subpathOf(specifier, packageName),

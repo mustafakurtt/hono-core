@@ -60,13 +60,13 @@ export function createTranslator(catalog: Catalog, defaultLocale: string): Trans
 export function mergeCatalogs(...catalogs: Catalog[]): Catalog {
   const merged: Catalog = {};
   for (const catalog of catalogs) {
-    for (const locale of Object.keys(catalog)) {
+    for (const [locale, entries] of Object.entries(catalog)) {
       const target = (merged[locale] ??= {});
-      for (const key of Object.keys(catalog[locale])) {
+      for (const [key, value] of Object.entries(entries)) {
         if (key in target) {
           throw new Error(`i18n katalog çakışması: "${key}" anahtarı "${locale}" dilinde birden fazla kez tanımlı.`);
         }
-        target[key] = catalog[locale][key];
+        target[key] = value;
       }
     }
   }

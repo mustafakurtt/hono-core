@@ -22,11 +22,11 @@ export function resolveLocale(
   const ranked = header
     .split(",")
     .map((part) => {
-      const [tag, ...params] = part.trim().split(";");
+      const [tag = "", ...params] = part.trim().split(";");
       const qParam = params.find((p) => p.trim().toLowerCase().startsWith("q="));
-      const q = qParam ? Number.parseFloat(qParam.split("=")[1]) : 1;
+      const q = qParam ? Number.parseFloat(qParam.split("=")[1] ?? "") : 1;
       return {
-        locale: tag.trim().split("-")[0].toLowerCase(),
+        locale: (tag.trim().split("-")[0] ?? "").toLowerCase(),
         q: Number.isNaN(q) ? 0 : q,
       };
     })

@@ -34,7 +34,7 @@ const AUTHZ: Record<string, AuthzContext> = {
  * (bkz. rbac.test.ts) — bu dosya tenant kullanmaz ama alanı doldurmak zorundadır.
  */
 const verify = async (token: string): Promise<AuthClaims | null> => {
-  const [subject, version] = token.split("#");
+  const [subject = "", version] = token.split("#");
   if (!AUTHZ[subject]) return null;
   return { subject, orgId: null, sessionVersion: version ? Number(version) : 1 };
 };
@@ -60,7 +60,7 @@ function buildApp(options: BuildOptions = {}) {
   const rbac = createRbac<PermissionKey>({
     auth: auth.middleware,
     getSubjectId: (user) => user.subject,
-    resolveAuthz: async (id) => AUTHZ[id],
+    resolveAuthz: async (id) => AUTHZ[id]!,
     enforce: options.enforce,
     steps: options.steps,
     ...(options.audit ? { audit: (c, key) => options.audit!(key, c.req.method) } : {}),
@@ -219,7 +219,7 @@ describe("createRbac — tip düzeyi güvenceler", () => {
     const rbac = createRbac<PermissionKey>({
       auth: createAuth({ verify }).middleware,
       getSubjectId: (user) => user.subject,
-      resolveAuthz: async (id) => AUTHZ[id],
+      resolveAuthz: async (id) => AUTHZ[id]!,
     });
 
     // @ts-expect-error — "yok.olan" PermissionKey union'ında değil.
@@ -234,7 +234,7 @@ describe("createRbac — tip düzeyi güvenceler", () => {
     const rbac = createRbac<PermissionKey>({
       auth: createAuth({ verify }).middleware,
       getSubjectId: (user) => user.subject,
-      resolveAuthz: async (id) => AUTHZ[id],
+      resolveAuthz: async (id) => AUTHZ[id]!,
     });
 
     const passthrough: GuardStep = async (_c, next) => void (await next());

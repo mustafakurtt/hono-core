@@ -167,7 +167,7 @@ describe.skipIf(!DATABASE_URL)("core/db — CompositeKeyRepository", () => {
       expect(await repo.deleteByKey({ postId: POST_A, locale: "tr" })).toBe(true);
 
       expect(await repo.count()).toBe(1);
-      expect((await repo.findMany())[0].locale).toBe("en");
+      expect((await repo.findMany())[0]!.locale).toBe("en");
     });
 
     test("deleteWhere kısmi filtreyle siler", async () => {

@@ -62,7 +62,10 @@ export class BaseRepository<TTable extends WithId, TQuery = unknown> extends PgR
   // ── Yazma ──────────────────────────────────────────────────────────────
   async create(values: InferInsertModel<TTable>): Promise<InferSelectModel<TTable>> {
     const rows = (await this.db.insert(this.table).values(values as any).returning()) as InferSelectModel<TTable>[];
-    return rows[0];
+    const [row] = rows;
+    // INSERT ... RETURNING tek satır döndürmek zorundadır; dönmediyse invaryant kırılmıştır.
+    if (!row) throw new Error("BaseRepository.create: INSERT satır döndürmedi");
+    return row;
   }
 
   async createMany(values: InferInsertModel<TTable>[]): Promise<InferSelectModel<TTable>[]> {

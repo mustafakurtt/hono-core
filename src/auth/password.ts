@@ -30,7 +30,7 @@ const GUARANTEED_CLASSES = [UPPERCASE, LOWERCASE, DIGITS, SYMBOLS] as const;
 const MINIMUM_LENGTH = GUARANTEED_CLASSES.length * 2;
 
 /** `byte`'ı bir alfabenin indeksine indirger. */
-const pick = (alphabet: string, byte: number): string => alphabet[byte % alphabet.length];
+const pick = (alphabet: string, byte: number): string => alphabet.charAt(byte % alphabet.length);
 
 /**
  * Kriptografik olarak güçlü, okunabilir geçici şifre üretir (örn. admin şifre
@@ -42,7 +42,7 @@ export const generatePassword = (length = 16): string => {
   const size = Math.max(length, MINIMUM_LENGTH);
   const bytes = crypto.getRandomValues(new Uint8Array(size));
 
-  const prefix = GUARANTEED_CLASSES.map((alphabet, index) => pick(alphabet, bytes[index])).join("");
+  const prefix = GUARANTEED_CLASSES.map((alphabet, index) => pick(alphabet, bytes[index] ?? 0)).join("");
   const body = Array.from(bytes.subarray(prefix.length), (byte) => pick(ALPHABET, byte)).join("");
 
   return prefix + body;

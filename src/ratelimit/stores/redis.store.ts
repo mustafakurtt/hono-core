@@ -41,8 +41,10 @@ export class RedisRateLimitStore implements RateLimitStore {
     // sessizce kapatmak olurdu (üstelik ilk `count=0` her isteği geçirirdi).
     if (!results) throw new Error("rate limit: redis pipeline döndürmedi");
     const [incrResult, ttlResult] = results;
-    if (incrResult?.[0]) throw incrResult[0];
-    if (ttlResult?.[0]) throw ttlResult[0];
+    // Eksik sonuç da kopuk pipeline'dır: sessizce 0 saymak limiti sessizce kapatırdı.
+    if (!incrResult || !ttlResult) throw new Error("rate limit: redis pipeline eksik sonuç döndürdü");
+    if (incrResult[0]) throw incrResult[0];
+    if (ttlResult[0]) throw ttlResult[0];
 
     const count = incrResult[1] as number;
     let ttlSeconds = ttlResult[1] as number;

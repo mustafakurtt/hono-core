@@ -222,7 +222,7 @@ describe.skipIf(!DATABASE_URL)("core/db — BaseRepository", () => {
 
       const ikinciSayfa = await repo.listKeyset({
         cursorColumn: items.createdAt,
-        cursor: ilkSayfa[1].createdAt,
+        cursor: ilkSayfa[1]!.createdAt,
         limit: 2,
       });
       expect(ikinciSayfa.map((r) => r.name)).toEqual(["N3", "N2"]);
