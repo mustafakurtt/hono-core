@@ -8,3 +8,6 @@ coverage/
 dist/
 # check:consumer'ın geçici derleme alanı (normalde kendini siler)
 .surface-check/
+
+# Claude Code ajan worktree'leri
+.claude/worktrees/
