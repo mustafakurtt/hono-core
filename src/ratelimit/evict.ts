@@ -24,7 +24,7 @@
  * pencerelerle doluyken her yeni anahtar sayılmadan geçer, yani sınırsız kalırdı.
  *
  * ════════════════════════════════════════════════════════════════════════
- * Karmaşıklık: toplu süpürme, amortize O(1)
+ * Karmaşıklık: toplu süpürme, anahtar başına amortize O(log n)
  * ════════════════════════════════════════════════════════════════════════
  * Doğru sırayı her yeni anahtarda bulmak tam tarama ister (O(capacity)) — anahtar
  * yağmurunda CPU yükünü katlar. Bunun yerine sınır aşıldığında TEK bir süpürme yapılır ve
