@@ -31,10 +31,25 @@ ikisi de aynı fabrikanın üzerine kuruludur.
 Pratik sonucu: core'u başka bir projeye taşıdığında hiçbir satırını
 düzenlemezsin — sadece farklı şeyler enjekte edersin.
 
+### Core'a ne girer?
+
+Bir parçanın core'a alınması için **iki** şartın birden sağlanması gerekir:
+
+1. **Projeden bağımsız mekanizmadır.** Proje adı, proje alanı, rol adı, env
+   okuma, metin ya da sabitlenmiş bir politika taşımaz. Projeye göre değişen
+   her karar bir seçenek veya fabrika parametresi olarak dışarıda kalır
+   (ör. `createClientIp({ trustedProxies })` — kaç proxy olduğunu proje söyler).
+2. **En az iki projede gerçekten lazımdır.** "Bir gün lazım olur" yeterli
+   değildir. Yeni şey önce projede yazılır; ikinci projede ihtiyaç doğunca
+   core'a taşınır ve iki kopya tek kaynağa iner.
+
+Soru her seferinde aynıdır: bu bir **mekanizma** mı, yoksa bir **karar** mı?
+Mekanizma core'a, karar projeye.
+
 ## Kurulum
 
 ```sh
-bun add github:mustafakurtt/hono-core#v0.4.0
+bun add github:mustafakurtt/hono-core#v0.5.0
 ```
 
 Peer bağımlılıklar isteğe bağlıdır: yalnızca kullandığın modülünkini kurarsın.
@@ -144,7 +159,7 @@ app.post("/posts", ...guard("post.manage"), (c) => c.json({ ok: true }));
 ```sh
 bun install
 bun run typecheck     # tsc --noEmit (src + tests)
-bun test              # 178 test, altyapı gerektirmez
+bun test              # 201 test, altyapı gerektirmez
 
 # core/db testleri gerçek Postgres ister:
 docker compose up -d
@@ -159,7 +174,7 @@ bun test              # artık db testleri de koşar
 
 - **v0.x, API dondurulmadı.** Çekirdek iki üretim projesine karşı doğrulandı ve
   ikinci proje üzerinden gelen bulgular kapatıldı; yine de kırıcı değişiklik
-  olabilir. Sürümü etikete kilitle (`#v0.4.0`), `main`'e bağlanma.
+  olabilir. Sürümü etikete kilitle (`#v0.5.0`), `main`'e bağlanma.
 - `/db`, core'un **Drizzle + PostgreSQL'e özgü** tek parçasıdır. ORM-agnostik
   değildir, bilinçli olarak. `BaseRepository` tekil `id`, `CompositeKeyRepository`
   bileşik anahtar içindir; çalışma anında tablo seçen desenler ikisine de girmez,

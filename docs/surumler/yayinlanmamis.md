@@ -1,42 +1,34 @@
-# Yayınlanmamış (v0.5.0 hedefi)
+# Yayınlanmamış (v0.6.0 hedefi)
 
-**Tek cümlelik özet:** Tüketicilerin kendi `packages/core`'unda kopya taşıdığı
-dört saf yardımcı (IP, e-posta anahtarı, sayfalama, denetim farkı) artık core'da.
+> Yeni sürüm notu yazarken bu dosyayı kopyala. Bölümleri SİLME — bir bölüm
+> boşsa "Yok." yaz. Boş bölüm, atlanmış bölümden ayırt edilebilir olmalı.
 
-**Kırıcı mı:** Hayır. Yalnızca ekleme; mevcut hiçbir export değişmedi.
+**Tek cümlelik özet:** <bu sürüm tüketici için ne anlama geliyor?>
+
+**Kırıcı mı:** Evet / Hayır
 
 ---
 
 ## Etki
 
+Bilinen her tüketici için ayrı satır. "Bilmiyorum" yazmak, boş bırakmaktan iyidir.
+
 | Tüketici | Etkilenir mi | Gereken iş |
 |---|---|---|
-| rfcear | Hayır (isteğe bağlı geçiş) | `@rfcear/core`'daki kopyaları silip core'dan import etmek — ilk geçen proje |
-| laputa-next | Hayır (isteğe bağlı geçiş) | rfcear ile aynı geçiş, rfcear canlıda doğrulandıktan sonra |
-| fenixAVM-bun | Hayır (isteğe bağlı geçiş) | Kendi `client-ip.ts` + `ip-subject.ts`'i var; core sürümü bunların kuralını (sağdan seçim, port kırpma, `null`) karşılıyor. `TRUST_PROXY=true` → `trustedProxies: 1`. `paginate`/`emailKey`/`diffChanges` kullanmıyor |
+| laputa-backend | — | — |
+| uniclub-backend | — | — |
+| bun-hono-starter | — | — |
 
 ---
 
 ## Yapılacaklar
 
-Hiçbir şey yapman gerekmiyor. Kopyaları kaldırmak isteyen tüketici için:
+Etkilenen tüketicinin uygulayacağı adımlar, **sırayla ve birebir**. Hiçbir iş
+yoksa: "Hiçbir şey yapman gerekmiyor." yaz.
 
 ```diff
-- import { paginate } from "@rfcear/core/db";
-+ import { paginate } from "@mustafakurtt/hono-core/db";
-
-- import { emailKey } from "@rfcear/core/mail";
-+ import { emailKey } from "@mustafakurtt/hono-core/ratelimit";
-
-- import { diffChanges } from "@rfcear/core/rbac";
-+ import { diffChanges } from "@mustafakurtt/hono-core/rbac";
-
-- import { clientIp, clientKey } from "@rfcear/core/http";
-+ // shared/client-ip.ts — proxy kararı projede, bir kez:
-+ import { createClientIp } from "@mustafakurtt/hono-core/http";
-+ const clientIpResolver = createClientIp({ trustedProxies: 1 });
-+ export const clientIp = clientIpResolver.ip;
-+ export const clientKey = clientIpResolver.key;
+- eski
++ yeni
 ```
 
 ---
@@ -47,29 +39,19 @@ Hiçbir şey yapman gerekmiyor. Kopyaları kaldırmak isteyen tüketici için:
 Yok.
 
 ### Eklendi
-- `/http`: `createClientIp({ trustedProxies, header?, remoteAddress? })` ve `ipKey`.
-  `trustedProxies` zorunludur, varsayılanı yoktur: proxy başlığına güvenmek
-  projenin kararıdır. Başlık değeri **sağdan** seçilir (ekleyen proxy
-  zincirlerinde ziyaretçinin soldaki uydurması atlanır), proxy'nin eklediği port
-  kırpılır. `resolve(c)` adres bulunamazsa `null` döner; `ip(c)` `"unknown"`.
-- `/http`: `parseForwardedFor(header, trustedProxies)` — aynı kural, başlığı
-  kendisi okuyan katmanlar için.
-- `ipKey`: port kırpar; çözülemeyen IPv6'yı olduğu gibi bırakır (fenixAVM'nin
-  `rateLimitSubject` kuralı). Geçerli adreslerde rfcear/laputa kopyasıyla aynı anahtar.
-- `/ratelimit`: `emailKey` — aynı posta kutusunun varyantlarını tek anahtara indirir.
-  `/mail` yerine burada: `/mail` nodemailer'ı zorunlu kılar.
-- `/db`: `paginate`, `Page`, `PaginateQuery` — ORM bilmeyen sayfalama kabuğu.
-- `/rbac`: `diffChanges` — denetim kaydı için önce/sonra farkı.
+Yok.
 
 ### Düzeltildi
 Yok.
 
 ### İç (tüketiciyi etkilemez)
-- `bun.lock`, `package.json`'daki `drizzle-orm <2` sınırıyla eşitlendi.
+Yok.
 
 ---
 
 ## Doğrulama
+
+Tüketicide koşulacak komutlar ve beklenen çıktı.
 
 ```sh
 bun run typecheck
@@ -80,11 +62,7 @@ bun test
 
 ## Dikkat
 
-- `clientIp`'in eski hâli `X-Forwarded-For`'un **ilk** değerini alıyordu.
-  `trustedProxies: 1` **son** değeri alır. Kenar proxy başlığı baştan yazıyorsa
-  (rfcear'daki Caddy `header_up X-Forwarded-For {client_ip}`) başlıkta tek değer
-  olduğu için sonuç aynıdır. Başlığa EKLEYEN bir proxy zinciri varsa sayıyı
-  zincirdeki güvenilir proxy sayısına göre ver.
+Kolay kaçan noktalar, tuzaklar, "şunu yapma" uyarıları. Yoksa "Yok." yaz.
 
 ---
 

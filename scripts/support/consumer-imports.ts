@@ -29,12 +29,16 @@ export interface ConsumerImport {
  * `import ... from "<paket>[/altyol]"` ve aynı biçimdeki `export ... from`
  * ifadelerini yakalar. `[^;]*?` gövdeyi tek ifadeyle sınırlar: çok satırlı
  * isim listeleri kapsanır ama eşleşme bir sonraki ifadeye TAŞMAZ.
+ *
+ * Anahtar kelime SATIR BAŞINDA aranır: aksi hâlde bir yorumdaki "import"
+ * kelimesi ("doğrulama import anında koşar") sonraki gerçek ifadeyle birleşip
+ * yorum metni koda karışıyordu.
  */
 function buildImportPattern(packageName: string): RegExp {
   const escapedName = packageName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return new RegExp(
-    `(?:import|export)\\s+[^;]*?from\\s*["'](${escapedName}(?:\\/[^"']+)?)["']`,
-    "g"
+    `^[ \\t]*(?:import|export)\\s+[^;]*?from\\s*["'](${escapedName}(?:\\/[^"']+)?)["']`,
+    "gm"
   );
 }
 
