@@ -19,3 +19,5 @@ export {
   type RateLimitPipeline,
 } from "./stores/redis.store";
 export { emailKey } from "./email-key";
+// Middleware olmayan, süreç içi olay sayacı (hatalı kod/şifre denemeleri, denetim satırı seyreltme).
+export { createThrottle, type CreateThrottleOptions, type Throttle } from "./throttle";

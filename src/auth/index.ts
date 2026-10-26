@@ -22,3 +22,16 @@ export { bearerToken, cookieToken, firstToken, type TokenExtractor } from "./tok
 
 export { createJwt, type CreateJwtOptions } from "./jwt";
 export { hashPassword, verifyPassword, generatePassword } from "./password";
+
+// 2FA mekanizması: TOTP (RFC 6238) + veritabanındaki sırrı mühürleyen kutu + kurtarma kodları.
+// "Kimde 2FA zorunlu", issuer adı ve kutunun anahtar metni projenin kararıdır.
+export {
+  base32,
+  generateSecret,
+  hotp,
+  matchStep,
+  otpauthUri,
+  stepAt,
+  type TotpOptions,
+} from "./totp";
+export { createSecretBox, generateRecoveryCodes, hashRecoveryCode, type SecretBox } from "./secret-box";
