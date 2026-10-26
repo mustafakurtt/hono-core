@@ -8,7 +8,7 @@ import { createCipheriv, createDecipheriv, createHash, randomBytes } from "node:
  * Biçim: `v1.<iv>.<tag>.<gövde>` (hepsi base64url). Sürüm öneki, ileride algoritma
  * değiştirilirse eski kayıtların tanınması içindir.
  *
- * BİÇİM KİLİTLİDİR: rfcear ve laputa bu biçimle mühürlenmiş sırları saklıyor. Anahtar türetme,
+ * BİÇİM KİLİTLİDİR: tüketiciler bu biçimle mühürlenmiş sırları veritabanında saklıyor. Anahtar türetme,
  * kodlama, ayraç, IV (12 bayt) ve tag (16 bayt) uzunluğu değişmemeli; yeni bir biçim gerekirse
  * `v2` olarak EKLENİR ve `v1` açılmaya devam eder. Bkz. `tests/secret-box.test.ts`.
  */
