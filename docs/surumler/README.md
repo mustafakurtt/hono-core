@@ -63,9 +63,13 @@ main'e bağlanma.
 
 Sürüm etiketlemeden önce:
 
-1. `bun run typecheck` — temiz
-2. `bun test` — yeşil (bağımlılık sözleşmesi testi dahil)
-3. `bun run check:consumer <her tüketici yolu>` — her biri yeşil
+1. `docker compose up -d` ve `bun run verify` — tek komutta typecheck, DB
+   testleri **dahil** tüm testler (atlanan test varsa başarısız sayılır) ve
+   `.consumers` dosyasındaki her tüketiciye karşı salt okunur `check:consumer`.
+   `.consumers` makineye özgüdür, depoya girmez: satır başına bir yol
+   (ör. `../rfcear/apps/api`).
+2. (1'in parçası) typecheck temiz, testler yeşil
+3. (1'in parçası) her tüketici yeşil
 4. `yayinlanmamis.md` eksiksiz mi; "Etki" bölümü her bilinen tüketici için dolu mu
 5. `package.json` içindeki `version` yükseltildi mi
 6. `yayinlanmamis.md` → `v<sürüm>.md` olarak taşındı, yerine `SABLON.md`'den

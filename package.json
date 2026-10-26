@@ -48,7 +48,8 @@
   "scripts": {
     "typecheck": "tsc --noEmit",
     "test": "bun test",
-    "check:consumer": "bun run scripts/check-consumer.ts"
+    "check:consumer": "bun run scripts/check-consumer.ts",
+    "verify": "bun run scripts/verify.ts"
   },
   "peerDependencies": {
     "@hono/zod-validator": ">=0.8.0",

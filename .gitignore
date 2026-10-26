@@ -11,3 +11,6 @@ dist/
 
 # Claude Code ajan worktree'leri
 .claude/worktrees/
+
+# Yerel tüketici yolları (bun run verify) — makineye özgü
+.consumers
