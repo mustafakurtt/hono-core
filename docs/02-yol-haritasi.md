@@ -45,11 +45,15 @@ Sonuç, gerçek tüketici ortamında **çapraz doğrulandı** (yalnızca `hono`+
 aynı sonuç):
 
 ```
-peer'sız yüklenen:  /auth /cache /config /http /i18n /logger /ratelimit /rbac /storage
+peer'sız yüklenen:  /auth /cache /config /http /i18n /logger /push /push/testing
+                    /ratelimit /rbac /storage
 peer gerektiren:    /http/validation → @hono/zod-validator    /db  → drizzle-orm
-                    /mail → nodemailer   /metrics → prom-client
-                    /notifications → web-push   /redis → ioredis
+                    /mail → nodemailer   /metrics → prom-client   /redis → ioredis
 ```
+
+> v0.7.0: `web-push` tabanlı `/notifications` kaldırıldı; yerine yalnızca
+> `node:crypto` kullanan `/push` geldi. `web-push` artık peer değil, yalnızca
+> birlikte çalışabilirlik testinin dev bağımlılığı.
 
 ### ✅ Katman B — tüketici uyum kontrolü (tamamlandı)
 

@@ -54,8 +54,9 @@ bun add github:mustafakurtt/hono-core#v0.6.0
 
 Peer bağımlılıklar isteğe bağlıdır: yalnızca kullandığın modülünkini kurarsın.
 `hono`, `zod` ve `pino` fiilen her zaman gerekir; `drizzle-orm` (db), `ioredis`
-(redis/cache/ratelimit adaptörleri), `nodemailer` (mail), `prom-client` (metrics),
-`web-push` (notifications) ve `@hono/zod-validator` (http/validation) opsiyoneldir.
+(redis/cache/ratelimit adaptörleri), `nodemailer` (mail), `prom-client` (metrics)
+ve `@hono/zod-validator` (http/validation) opsiyoneldir. `/push` (Web Push) peer
+gerektirmez: yalnızca `node:crypto` kullanır.
 
 Kaynak olarak dağıtılır (build adımı yok) — Bun TypeScript'i doğrudan çalıştırır.
 Bunun bir bedeli var: **tüketicinin `tsc`'si core'un kaynağını da derler**, bu
@@ -91,7 +92,8 @@ karşı doğrulanır. Bir modül bildirilmemiş bir peer'a uzanırsa test kırı
 | `/redis` | ioredis istemci fabrikası | ioredis |
 | `/mail` | nodemailer taşıma katmanı | nodemailer |
 | `/metrics` | Prometheus metrikleri + `/metrics` rotası | prom-client |
-| `/notifications` | Web Push (VAPID) göndericisi | web-push |
+| `/push` | Sıfır bağımlılıklı Web Push: içerik şifreleme (RFC 8291), VAPID (RFC 8292), `sendWebPush` (RFC 8030), push servisi izin listesi (`isPushServiceEndpoint`, SSRF) | — |
+| `/push/testing` | Yalnızca testler: alıcı tarafı `decryptPayload` (gönderilen bildirimi testte açmak için) | — |
 
 ### Öne çıkan davranışlar
 
