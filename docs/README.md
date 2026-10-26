@@ -10,6 +10,7 @@ projeleri nasıl kırmadan yapıyoruz" tutulur.
 |---|---|---|
 | [`01-bulgular.md`](01-bulgular.md) | Bulgu kataloğu. Her bulgunun kimliği, kanıtı, önerilen düzeltmesi ve **mevcut projelere etkisi**. | Core geliştiricisi |
 | [`02-yol-haritasi.md`](02-yol-haritasi.md) | Bulguların sürümlere dağıtımı, uyumluluk politikası, tüketici duman testi. | Core geliştiricisi |
+| [`03-icerik-katmani.md`](03-icerik-katmani.md) | **CMS yolu:** içerik katmanı planı (v0.8/v0.9), tartışma sonuçları, açık kararlar. Henüz başlanmadı. | Core geliştiricisi |
 | [`surumler/`](surumler/) | **Tüketiciye bakan** değişiklik günlüğü: sende ne değişti, ne yapman gerekiyor, nasıl doğrularsın. | **Tüketici projeler ve ajanları** |
 
 İki kitleyi ayrı tutuyoruz: `01`/`02` core'un iç muhasebesidir, `surumler/`

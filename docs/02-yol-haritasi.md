@@ -225,6 +225,25 @@ eksik değil.
 
 ---
 
+## v0.5.0 – v0.7.0 — Tüketicilerden ortak kod · ✅ TAMAMLANDI (2026-10-26)
+
+rfcear/laputa'nın `packages/core` kopyaları adım adım core'a alındı; rfcear'da
+`packages/core` tamamen silindi. Kural README'ye yazıldı ("Core'a ne girer?").
+
+| Sürüm | İçerik |
+|---|---|
+| v0.5.0 | `createClientIp`/`ipKey`/`parseForwardedFor`, `emailKey`, `paginate`, `diffChanges` |
+| v0.6.0 | TOTP, `createSecretBox` (biçim kilitli), `createThrottle`; **güvenlik:** bellek içi sayaçlarda anahtar yağmuruyla kilit sıfırlama kapandı; `bun run verify` |
+| v0.7.0 | Sıfır bağımlılıklı `/push` (+ `/push/testing`); kırıcı: `/notifications` kaldırıldı; kopyalardaki kısa VAPID anahtarı hatası düzeltildi |
+
+Ayrıntı: `surumler/v0.5.0.md`, `v0.6.0.md`, `v0.7.0.md`.
+
+## Sıradaki: içerik katmanı (CMS yolu) — planlandı, başlanmadı
+
+v0.8 (2b'nin temeli: site yenileme kuyruğu, PG hataları, depolama ekleri) ve
+v0.9 (içerik deposu). Plan, tartışma sonuçları ve açık kararlar:
+[`03-icerik-katmani.md`](03-icerik-katmani.md).
+
 ## Sürümlenmemiş / paralel yürüyen kararlar
 
 | Konu | Aksiyon | Durum |
