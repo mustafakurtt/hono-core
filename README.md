@@ -49,7 +49,7 @@ Mekanizma core'a, karar projeye.
 ## Kurulum
 
 ```sh
-bun add github:mustafakurtt/hono-core#v0.5.0
+bun add github:mustafakurtt/hono-core#v0.6.0
 ```
 
 Peer bağımlılıklar isteğe bağlıdır: yalnızca kullandığın modülünkini kurarsın.
@@ -159,7 +159,7 @@ app.post("/posts", ...guard("post.manage"), (c) => c.json({ ok: true }));
 ```sh
 bun install
 bun run typecheck     # tsc --noEmit (src + tests)
-bun test              # 201 test, altyapı gerektirmez
+bun test              # 233 test altyapısız, 46 db testi Postgres ister
 
 # core/db testleri gerçek Postgres ister:
 docker compose up -d
@@ -174,7 +174,7 @@ bun test              # artık db testleri de koşar
 
 - **v0.x, API dondurulmadı.** Çekirdek iki üretim projesine karşı doğrulandı ve
   ikinci proje üzerinden gelen bulgular kapatıldı; yine de kırıcı değişiklik
-  olabilir. Sürümü etikete kilitle (`#v0.5.0`), `main`'e bağlanma.
+  olabilir. Sürümü etikete kilitle (`#v0.6.0`), `main`'e bağlanma.
 - `/db`, core'un **Drizzle + PostgreSQL'e özgü** tek parçasıdır. ORM-agnostik
   değildir, bilinçli olarak. `BaseRepository` tekil `id`, `CompositeKeyRepository`
   bileşik anahtar içindir; çalışma anında tablo seçen desenler ikisine de girmez,
