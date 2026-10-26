@@ -13,7 +13,7 @@ dört saf yardımcı (IP, e-posta anahtarı, sayfalama, denetim farkı) artık c
 |---|---|---|
 | rfcear | Hayır (isteğe bağlı geçiş) | `@rfcear/core`'daki kopyaları silip core'dan import etmek — ilk geçen proje |
 | laputa-next | Hayır (isteğe bağlı geçiş) | rfcear ile aynı geçiş, rfcear canlıda doğrulandıktan sonra |
-| fenixAVM-bun | Hayır | Yok — bu yardımcıların kopyası yok |
+| fenixAVM-bun | Hayır (isteğe bağlı geçiş) | Kendi `client-ip.ts` + `ip-subject.ts`'i var; core sürümü bunların kuralını (sağdan seçim, port kırpma, `null`) karşılıyor. `TRUST_PROXY=true` → `trustedProxies: 1`. `paginate`/`emailKey`/`diffChanges` kullanmıyor |
 
 ---
 
@@ -50,7 +50,12 @@ Yok.
 - `/http`: `createClientIp({ trustedProxies, header?, remoteAddress? })` ve `ipKey`.
   `trustedProxies` zorunludur, varsayılanı yoktur: proxy başlığına güvenmek
   projenin kararıdır. Başlık değeri **sağdan** seçilir (ekleyen proxy
-  zincirlerinde ziyaretçinin soldaki uydurması atlanır).
+  zincirlerinde ziyaretçinin soldaki uydurması atlanır), proxy'nin eklediği port
+  kırpılır. `resolve(c)` adres bulunamazsa `null` döner; `ip(c)` `"unknown"`.
+- `/http`: `parseForwardedFor(header, trustedProxies)` — aynı kural, başlığı
+  kendisi okuyan katmanlar için.
+- `ipKey`: port kırpar; çözülemeyen IPv6'yı olduğu gibi bırakır (fenixAVM'nin
+  `rateLimitSubject` kuralı). Geçerli adreslerde rfcear/laputa kopyasıyla aynı anahtar.
 - `/ratelimit`: `emailKey` — aynı posta kutusunun varyantlarını tek anahtara indirir.
   `/mail` yerine burada: `/mail` nodemailer'ı zorunlu kılar.
 - `/db`: `paginate`, `Page`, `PaginateQuery` — ORM bilmeyen sayfalama kabuğu.

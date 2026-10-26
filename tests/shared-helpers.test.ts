@@ -1,6 +1,6 @@
 import { describe, expect, test } from "bun:test";
 import { Hono } from "hono";
-import { createClientIp, ipKey } from "../src/http";
+import { createClientIp, ipKey, parseForwardedFor } from "../src/http";
 import { emailKey } from "../src/ratelimit";
 import { paginate } from "../src/db/pagination";
 import { diffChanges } from "../src/rbac";
@@ -30,6 +30,33 @@ describe("ipKey", () => {
     expect(ipKey("2001:db8::")).toBe("2001:db8:0:0::/64");
     expect(ipKey("::1")).toBe("0:0:0:0::/64");
     expect(ipKey("fe80::1:2:3:4")).toBe("fe80:0:0:0::/64");
+  });
+
+  // fenixAVM'nin kendi `rateLimitSubject`'inden alınan vektörler (İ-81, K-160).
+  test("köşeli parantez ve port soyulur", () => {
+    expect(ipKey("[2001:db8:1:2::1]:443")).toBe("2001:db8:1:2::/64");
+    expect(ipKey("[2001:db8:1:2::1]")).toBe("2001:db8:1:2::/64");
+    expect(ipKey("203.0.113.5:5678")).toBe("203.0.113.5");
+  });
+
+  test("çözülemeyen biçim olduğu gibi kalır (bozuk adresler tek kovada birleşmez)", () => {
+    expect(ipKey("1::2::3")).toBe("1::2::3");
+    expect(ipKey("2001:db8::zzzz")).toBe("2001:db8::zzzz");
+  });
+});
+
+describe("parseForwardedFor", () => {
+  test("en sağdaki değer alınır, port kırpılır, çıplak IPv6'ya dokunulmaz", () => {
+    expect(parseForwardedFor("6.6.6.6, 203.0.113.7", 1)).toBe("203.0.113.7");
+    expect(parseForwardedFor("6.6.6.6, 203.0.113.7:51234", 1)).toBe("203.0.113.7");
+    expect(parseForwardedFor("[2001:db8::1]:443", 1)).toBe("2001:db8::1");
+    expect(parseForwardedFor("2001:db8::1", 1)).toBe("2001:db8::1");
+    expect(parseForwardedFor("::ffff:203.0.113.7", 1)).toBe("::ffff:203.0.113.7");
+  });
+
+  test("boş başlık ya da güvenilir proxy yoksa sonuç yok", () => {
+    for (const value of [undefined, null, "", " , "]) expect(parseForwardedFor(value, 1)).toBeUndefined();
+    expect(parseForwardedFor("203.0.113.7", 0)).toBeUndefined();
   });
 });
 
@@ -63,6 +90,12 @@ describe("createClientIp", () => {
   test("başlık yoksa bağlantı adresi, o da yoksa unknown", async () => {
     expect((await resolve({ trustedProxies: 1 })).ip).toBe("10.0.0.9");
     expect((await resolve({ trustedProxies: 1, remoteAddress: () => undefined })).ip).toBe("unknown");
+  });
+
+  test("resolve adres uydurmaz: bulunamazsa null", async () => {
+    const clientIp = createClientIp({ trustedProxies: 1, remoteAddress: () => undefined });
+    const app = new Hono().get("/", (c) => c.json({ ip: clientIp.resolve(c) }));
+    expect(await (await app.request("/")).json()).toEqual({ ip: null });
   });
 
   test("varsayılan bağlantı adresi Bun sunucusu dışında çökmez", async () => {

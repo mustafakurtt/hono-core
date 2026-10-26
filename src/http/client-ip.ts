@@ -14,6 +14,9 @@ import { getConnInfo } from "hono/bun";
  * Solundaki her şey ziyaretçinin uydurabileceği değerlerdir. Kenar proxy
  * başlığı baştan yazıyorsa (Caddy `header_up X-Forwarded-For {client_ip}`)
  * başlıkta tek değer olur ve `trustedProxies: 1` onu seçer.
+ *
+ * Proxy'nin eklediği port kırpılır (IIS ARR `1.2.3.4:5678`, `[2001:db8::1]:443`):
+ * kalırsa her bağlantı ayrı hız sınırı kovasına düşer ve giriş kilidi etkisiz kalır.
  */
 export interface ClientIpOptions {
   /**
@@ -32,7 +35,12 @@ export interface ClientIpOptions {
 }
 
 export interface ClientIp {
-  /** Ziyaretçinin tam adresi (log, denetim kaydı). Bulunamazsa `"unknown"`. */
+  /**
+   * Ziyaretçinin adresi; bulunamazsa `null`. "Bilinmiyor"un anlamına çağıran
+   * karar verir (hız sınırında yedek kova, kayıtta boş alan).
+   */
+  resolve(c: Context): string | null;
+  /** `resolve` ile aynı, bulunamazsa `"unknown"` (log ve denetim alanı için). */
   ip(c: Context): string;
   /** Hız sınırı anahtarı: IPv6 /64'e indirgenmiş adres (bkz. `ipKey`). */
   key(c: Context): string;
@@ -41,6 +49,34 @@ export interface ClientIp {
 const UNKNOWN = "unknown";
 /** Başlıktan gelen değer için üst sınır: log satırı şişmesin. */
 const MAX_ADDRESS_LENGTH = 64;
+
+const BRACKETED = /^\[([^\]]+)\](?::\d+)?$/;
+const IPV4_WITH_PORT = /^(\d{1,3}(?:\.\d{1,3}){3}):\d+$/;
+const IPV4_MAPPED = /^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/;
+const HEXTET = /^[0-9a-f]{1,4}$/;
+const IPV6_GROUPS = 8;
+const PREFIX_GROUPS = 4;
+
+/** Proxy'nin eklediği portu ve köşeli parantezi soyar; çıplak IPv6'ya dokunmaz. */
+const stripPort = (address: string): string =>
+  BRACKETED.exec(address)?.[1] ?? IPV4_WITH_PORT.exec(address)?.[1] ?? address;
+
+/**
+ * Başlık değerinden ziyaretçi adresi (`createClientIp`'in kullandığı kural).
+ * Ayrıca dışa açıktır: aynı kuralı başlığı kendisi okuyan katmanlarda (ör. web
+ * sunucusu) kopyalamadan kullanmak için.
+ */
+export function parseForwardedFor(header: string | null | undefined, trustedProxies: number): string | undefined {
+  if (trustedProxies <= 0 || !header) return undefined;
+  const values = header
+    .split(",")
+    .map((value) => value.trim())
+    .filter(Boolean);
+  // Başlıkta beklenenden az değer varsa kenar proxy başlığı baştan yazmıştır:
+  // en soldaki değer de güvenilirdir.
+  const picked = values[Math.max(0, values.length - trustedProxies)];
+  return picked ? stripPort(picked).slice(0, MAX_ADDRESS_LENGTH) : undefined;
+}
 
 const bunRemoteAddress = (c: Context): string | undefined => {
   try {
@@ -57,42 +93,37 @@ export function createClientIp(options: ClientIpOptions): ClientIp {
     throw new Error(`createClientIp: trustedProxies must be a non-negative integer, got ${trustedProxies}`);
   }
 
-  const fromHeader = (c: Context): string | undefined => {
-    if (trustedProxies === 0) return undefined;
-    const values = (c.req.header(header) ?? "")
-      .split(",")
-      .map((value) => value.trim())
-      .filter(Boolean);
-    // Başlıkta beklenenden az değer varsa kenar proxy başlığı baştan yazmıştır:
-    // en soldaki değer de güvenilirdir.
-    const picked = values[Math.max(0, values.length - trustedProxies)];
-    return picked?.slice(0, MAX_ADDRESS_LENGTH);
-  };
+  const resolve = (c: Context): string | null =>
+    parseForwardedFor(c.req.header(header), trustedProxies) ?? remoteAddress(c) ?? null;
+  const ip = (c: Context): string => resolve(c) ?? UNKNOWN;
+  return { resolve, ip, key: (c) => ipKey(ip(c)) };
+}
 
-  const ip = (c: Context): string => fromHeader(c) ?? remoteAddress(c) ?? UNKNOWN;
-  return { ip, key: (c) => ipKey(ip(c)) };
+/** "2001:db8::1" → 8 grup (baştaki sıfırlar atılmış); geçersiz biçimde `null`. */
+function expandIpv6(address: string): string[] | null {
+  const parts = address.split("::");
+  if (parts.length > 2) return null;
+  const head = parts[0] ? parts[0].split(":") : [];
+  const tail = parts[1] ? parts[1].split(":") : [];
+  const fill = parts.length === 2 ? IPV6_GROUPS - head.length - tail.length : 0;
+  if (fill < 0) return null;
+  const groups = [...head, ...Array<string>(fill).fill("0"), ...tail];
+  if (groups.length !== IPV6_GROUPS || !groups.every((group) => HEXTET.test(group))) return null;
+  return groups.map((group) => Number.parseInt(group, 16).toString(16));
 }
 
 /**
  * Hız sınırı anahtarı. IPv6'da tek adres kimlik değildir: sıradan bir VPS ya
  * da abone bütün bir /64 blok alır ve her istekte başka adres kullanabilir. Bu
  * yüzden IPv6 adresi /64 önekine indirgenir; IPv4'e eşlenmiş IPv6
- * (`::ffff:1.2.3.4`) IPv4 sayılır.
+ * (`::ffff:1.2.3.4`) IPv4 sayılır, port kırpılır. Çözülemeyen biçim olduğu
+ * gibi kalır: farklı bozuk adresler tek kovada birleşmesin.
  */
 export function ipKey(ip: string): string {
-  const address = (ip.split("%")[0] ?? "").toLowerCase();
-  const mapped = /^::ffff:(\d{1,3}(?:\.\d{1,3}){3})$/.exec(address);
+  const address = stripPort(ip).toLowerCase();
+  const mapped = IPV4_MAPPED.exec(address);
   if (mapped?.[1]) return mapped[1];
   if (!address.includes(":")) return address;
-
-  const [head = "", tail] = address.split("::");
-  const left = head ? head.split(":") : [];
-  const right = tail ? tail.split(":") : [];
-  const groups =
-    tail === undefined
-      ? left
-      : [...left, ...Array<string>(Math.max(0, 8 - left.length - right.length)).fill("0"), ...right];
-  const prefix = groups.slice(0, 4).map((group) => (Number.parseInt(group || "0", 16) || 0).toString(16));
-  while (prefix.length < 4) prefix.push("0");
-  return `${prefix.join(":")}::/64`;
+  const groups = expandIpv6(address.split("%")[0] ?? "");
+  return groups ? `${groups.slice(0, PREFIX_GROUPS).join(":")}::/64` : address;
 }
