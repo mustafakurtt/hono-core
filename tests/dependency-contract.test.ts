@@ -49,7 +49,6 @@ const OPTIONAL_PEERS_BY_SUBPATH: Readonly<Record<string, readonly string[]>> = {
   db: ["drizzle-orm"],
   mail: ["nodemailer"],
   metrics: ["prom-client"],
-  notifications: ["web-push"],
   redis: ["ioredis"],
   // Doğrulama katmanı `/http` barrel'ından AYRI tutulur: hata sözleşmesini
   // isteyen proje zod-validator kurmak zorunda kalmasın diye. Bu alt yolu

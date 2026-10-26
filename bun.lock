@@ -8,7 +8,6 @@
         "@hono/zod-validator": "^0.8.0",
         "@types/bun": "latest",
         "@types/nodemailer": "^8.0.1",
-        "@types/web-push": "^3.6.4",
         "drizzle-orm": "^1.0.0-rc.4",
         "hono": "^4.12.27",
         "ioredis": "^5.11.1",
@@ -28,7 +27,6 @@
         "nodemailer": ">=9.0.0",
         "pino": ">=9.6.0",
         "prom-client": ">=15.1.0",
-        "web-push": ">=3.6.0",
         "zod": ">=4.4.0",
       },
       "optionalPeers": [
@@ -37,7 +35,6 @@
         "ioredis",
         "nodemailer",
         "prom-client",
-        "web-push",
       ],
     },
   },
@@ -55,8 +52,6 @@
     "@types/node": ["@types/node@26.1.1", "", { "dependencies": { "undici-types": "~8.3.0" } }, "sha512-nxAkRSVkN1Y0JC1W8ky/fTfkGsMmcrRsbx+3XoZE+rMOX71kLYTV7fLXpqud1GpbpP5TuffXFqfX7fH2GgZREw=="],
 
     "@types/nodemailer": ["@types/nodemailer@8.0.1", "", { "dependencies": { "@types/node": "*" } }, "sha512-PxpaInm8V1JQDd4j0ds5HfvWQk8JupS1C0Picb96QJsrrRDjBH+DlK7L4ZdNSqNULhiZRQHc40nLVShaGxXAMw=="],
-
-    "@types/web-push": ["@types/web-push@3.6.4", "", { "dependencies": { "@types/node": "*" } }, "sha512-GnJmSr40H3RAnj0s34FNTcJi1hmWFV5KXugE0mYWnYhgTAHLJ/dJKAwDmvPJYMke0RplY2XE9LnM4hqSqKIjhQ=="],
 
     "agent-base": ["agent-base@7.1.4", "", {}, "sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ=="],
 

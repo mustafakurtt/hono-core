@@ -1,68 +1,135 @@
 # Yayınlanmamış (v0.7.0 hedefi)
 
-> Yeni sürüm notu yazarken bu dosyayı kopyala. Bölümleri SİLME — bir bölüm
-> boşsa "Yok." yaz. Boş bölüm, atlanmış bölümden ayırt edilebilir olmalı.
+**Tek cümlelik özet:** Web Push artık core'da ve sıfır bağımlılıklı (`/push`, yalnızca
+`node:crypto`); `web-push` tabanlı `/notifications` kaldırıldı. Tüketicilerin
+`packages/core/src/push` kopyaları silinebilir.
 
-**Tek cümlelik özet:** <bu sürüm tüketici için ne anlama geliyor?>
-
-**Kırıcı mı:** Evet / Hayır
+**Kırıcı mı:** Evet — `/notifications` alt yolu kaldırıldı. Bilinen hiçbir tüketici
+onu kullanmıyor (rfcear, laputa-next, fenixAVM-bun'da grep ile doğrulandı), bu yüzden
+pratikte kimse kırılmaz.
 
 ---
 
 ## Etki
 
-Bilinen her tüketici için ayrı satır. "Bilmiyorum" yazmak, boş bırakmaktan iyidir.
-
 | Tüketici | Etkilenir mi | Gereken iş |
 |---|---|---|
-| laputa-backend | — | — |
-| uniclub-backend | — | — |
-| bun-hono-starter | — | — |
+| rfcear | Hayır (isteğe bağlı geçiş) | `@rfcear/core/push` → `@mustafakurtt/hono-core/push`. Push, `packages/core`'daki son modül: geçişle birlikte `packages/core`'un tamamı silinebilir. |
+| laputa-next | Hayır (isteğe bağlı geçiş) | rfcear ile aynı geçiş (kopya bayt bayt aynı). Ayrıca kopyadaki `vapid.test.ts`'in ~%0,4 olasılıkla rastgele kırılması biter. |
+| fenixAVM-bun | Hayır | Push kodu yok; hiçbir şey yapma. |
 
 ---
 
 ## Yapılacaklar
 
-Etkilenen tüketicinin uygulayacağı adımlar, **sırayla ve birebir**. Hiçbir iş
-yoksa: "Hiçbir şey yapman gerekmiyor." yaz.
+Hiçbir şey yapman gerekmiyor. Kopyayı kaldırmak isteyen tüketici için (dosya adları rfcear'dan;
+laputa-next'te aynı dosyalar, önek `@laputa/core/push`):
 
 ```diff
-- eski
-+ yeni
+-from "@rfcear/core/push"            # generate-keys.ts, test/env.ts, push.config.ts, push.sender.ts
++from "@mustafakurtt/hono-core/push"
+-import { decryptPayload } from "@rfcear/core/push";          # test/push.fakes.ts
++import { decryptPayload } from "@mustafakurtt/hono-core/push/testing";
+# push.policy.ts
+-const PUSH_SERVICE_HOSTS = [...]; export function isAllowedEndpoint(...) {...}
++import { BROWSER_PUSH_SERVICE_HOSTS, isPushServiceEndpoint } from "@mustafakurtt/hono-core/push";
++export const isAllowedEndpoint = (endpoint: string) => isPushServiceEndpoint(endpoint, BROWSER_PUSH_SERVICE_HOSTS);
 ```
+
+**Ayrıca zorunlu — `push.sender.ts`:** doğrulama hataları artık senkron fırlatıldığı için (bkz.
+"Dikkat"), `map` geri çağrısı `async` olmalı. Aksi hâlde DB'deki tek bir bozuk abonelik (şemadan
+geçmiş ama geçerli P-256 noktası olmayan `p256dh`) ya da fazla büyük bir mesaj `Promise.allSettled`
+çağrılmadan önce fırlar ve **o kullanıcının bütün cihazlarına** gönderim düşer:
+
+```diff
+-      devices.map((device) => sendWebPush(device, JSON.stringify(messageFor(device)), options)),
++      devices.map(async (device) => sendWebPush(device, JSON.stringify(messageFor(device)), options)),
+```
+
+Silinecekler: `packages/core/src/push/` (kaynak + testleri) ve barrel/`exports` satırı.
+`.env`'deki `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` **değiştirilmez**: biçim aynı, mevcut
+abonelikler çalışmaya devam eder.
 
 ---
 
 ## Değişiklikler
 
 ### Kırıcı
-Yok.
+- `/notifications` kaldırıldı (`createWebPushSender`, `WebPushSender`, `VapidConfig`,
+  `CreateWebPushSenderOptions`, `SendResult`, `WebPushSubscription`, `WebPushPayload`,
+  `PushSubscriptionStore`). Yerine `/push`; abonelik deposu ve kime gönderileceği artık
+  tamamen projenin işi.
 
 ### Eklendi
-Yok.
+- `/push` (peer yok): `encryptPayload` + `MAX_PAYLOAD_BYTES` (3993; RFC 8291 `aes128gcm`, tek
+  4096 baytlık kayıt), `generateVapidKeys`, `assertVapidKeys`, `vapidAuthorization` (RFC 8292),
+  `sendWebPush` (RFC 8030; `ttlSeconds`, `urgency`, `topic`, `timeoutMs`, sahte `fetch`),
+  `BROWSER_PUSH_SERVICE_HOSTS` + `isPushServiceEndpoint(endpoint, hosts)` (SSRF izin listesi;
+  `hosts` zorunlu). Tipler: `PushKeys`, `EncryptOptions`, `VapidKeys`, `PushTarget`, `PushUrgency`,
+  `WebPushOptions`, `WebPushResult`.
+- `/push/testing`: `decryptPayload` — yalnızca testler için alıcı tarafı açıcı. Bilinçli olarak
+  `/push`'tan ayrı: tek kayıtlıdır, `rs`'yi yok sayar, gelen trafiğe karşı kullanılmaz.
+
+### Kaldırıldı
+- `web-push` peer bağımlılığı (ve `@types/web-push`). `web-push` yalnızca core'un kendi
+  birlikte çalışabilirlik testinde dev bağımlılığı olarak kaldı.
 
 ### Düzeltildi
-Yok.
+Tüketici kopyalarına (`packages/core/src/push`) göre:
+- **Kısa VAPID gizli anahtarı:** kopyalardaki `generateVapidKeys` ~%0,4 olasılıkla (baştaki bayt
+  sıfırsa; `getPrivateKey().subarray(-32)` dolgu yapmıyor) **31 baytlık** gizli anahtar üretiyordu.
+  Böyle bir anahtar kendi `assertVapidKeys`'inden geçmez ("32 bytes") ve web-push gibi kütüphanelerce
+  reddedilir. Kopyalardaki `vapid.test.ts`'in ara sıra, rastgele kırılmasının nedeni buydu. Artık
+  her zaman 32 bayt.
+- **Kısa anahtar girdisi:** 32 bayttan kısa gizli anahtar (yukarıdaki hatayla üretilmiş `.env`
+  değerleri) soldan sıfırla tamamlanıp kabul edilir; 32 bayttan uzunu reddedilir.
+- **`assertVapidKeys` baytları karşılaştırır:** aynı açık anahtarın dolgulu (`=`) ya da standart
+  alfabedeki yazımı artık yanlışlıkla "does not match" vermez. `k=` her zaman kanonik base64url.
+- **`vapidAuthorization` `ttlSeconds` doğrular:** 1..86400 arası tamsayı; aksi hâlde fırlatır
+  (önce servislerin reddedeceği `exp` sessizce üretilirdi).
+- **`sendWebPush` girdileri doğrular:** `https:` olmayan endpoint (RFC 8030 §8; kaçış kapısı yok),
+  geçersiz `topic` (≤32 karakter, `[A-Za-z0-9_-]`), `ttlSeconds` (≥0 tamsayı) ve `timeoutMs`
+  (pozitif tamsayı) fırlatır.
 
 ### İç (tüketiciyi etkilemez)
-Yok.
+- Kaynak testleri birebir taşındı; RFC 8291 Ek A vektörü, `web-push` ile birlikte çalışabilirlik
+  ve tüketici verisi uyumu (mevcut `.env` anahtarları, contracts şemasından geçmiş abonelikler)
+  testleri eklendi.
 
 ---
 
 ## Doğrulama
-
-Tüketicide koşulacak komutlar ve beklenen çıktı.
 
 ```sh
 bun run typecheck
 bun test
 ```
 
+Geçişten sonra **gerçek servislere elle duman testi yap:** panelde "test bildirimi" düğmesiyle
+en az bir iPhone/Mac Safari (Apple), bir Chrome/Android (FCM) ve bir Firefox (Mozilla) cihazına
+bildirim gönder; bildirimin geldiğini ve içeriğin doğru göründüğünü kontrol et.
+
 ---
 
 ## Dikkat
 
-Kolay kaçan noktalar, tuzaklar, "şunu yapma" uyarıları. Yoksa "Yok." yaz.
+- **Kripto core'un kendi yazdığıdır** (RFC vektörü ve `web-push` ile birlikte çalışabilirlik testi
+  geçiyor, ama gerçek servislerle bu repoda denenmedi). Yukarıdaki elle duman testini atlama.
+- **Uzunluk dolgusu yok:** şifreli gövdenin boyutu içeriğin boyutunu push servisine (Apple/Google/
+  Mozilla) sızdırır (RFC 8291 §6). Uzunluğu gizli kalması gereken bir şey gönderiyorsan içeriği
+  kendin sabit boya tamamla.
+- **Doğrulama hataları artık SENKRON fırlatır.** Kopyada `sendWebPush` `async`'ti, bozuk anahtar /
+  büyük içerik promise'i reddederdi; şimdi `topic`, `ttlSeconds`, `timeoutMs`, endpoint, anahtar ve
+  boyut hataları çağrı anında `Error` fırlatır (`"web push: …"` / `"vapid: …"`). Yalnızca
+  `.catch()` ile ya da `Promise.allSettled(list.map((x) => sendWebPush(...)))` ile yakalayan kod
+  bunları kaçırır: çağrıyı `try { await sendWebPush(...) }` içine al ya da `map` geri çağrısını
+  `async` yap (rfcear/laputa `push.sender.ts` için yukarıdaki diff).
+  Ağ hatası ve zaman aşımı promise'i reddetmeye, HTTP hatası `{ ok: false }` dönmeye devam eder.
+- Boş `topic` (`""`) kopyada yok sayılırdı; artık fırlatır. Topic istemiyorsan alanı hiç verme.
+- `isPushServiceEndpoint` için `hosts` zorunludur; tarayıcı servisleri için
+  `BROWSER_PUSH_SERVICE_HOSTS`'u açıkça ver. Endpoint'i abonelik **kaydedilirken** denetle;
+  `sendWebPush` yalnızca `https:` şartını uygular.
+- `decryptPayload`'ı üretim kodunda kullanma; yalnızca `/push/testing`'den, testlerde.
 
 ---
 

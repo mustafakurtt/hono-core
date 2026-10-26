@@ -38,7 +38,8 @@
     "./logger": "./src/logger/index.ts",
     "./mail": "./src/mail/index.ts",
     "./metrics": "./src/metrics/index.ts",
-    "./notifications": "./src/notifications/index.ts",
+    "./push": "./src/push/index.ts",
+    "./push/testing": "./src/push/testing.ts",
     "./ratelimit": "./src/ratelimit/index.ts",
     "./rbac": "./src/rbac/index.ts",
     "./redis": "./src/redis/index.ts",
@@ -59,7 +60,6 @@
     "nodemailer": ">=9.0.0",
     "pino": ">=9.6.0",
     "prom-client": ">=15.1.0",
-    "web-push": ">=3.6.0",
     "zod": ">=4.4.0"
   },
   "peerDependenciesMeta": {
@@ -77,16 +77,12 @@
     },
     "prom-client": {
       "optional": true
-    },
-    "web-push": {
-      "optional": true
     }
   },
   "devDependencies": {
     "@hono/zod-validator": "^0.8.0",
     "@types/bun": "latest",
     "@types/nodemailer": "^8.0.1",
-    "@types/web-push": "^3.6.4",
     "drizzle-orm": "^1.0.0-rc.4",
     "hono": "^4.12.27",
     "ioredis": "^5.11.1",
