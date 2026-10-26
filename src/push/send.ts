@@ -55,10 +55,12 @@ function assertHttpsEndpoint(endpoint: string): void {
 }
 
 /**
- * Doğrulama hataları (seçenekler, endpoint, anahtarlar, boyut) SENKRON fırlatılır; ağ hatası ve zaman
- * aşımı dönen promise'i reddeder; HTTP hatası `{ ok: false }` olarak döner.
+ * Her hata (seçenekler, endpoint, anahtarlar, boyut, ağ, zaman aşımı) dönen promise'i REDDEDER;
+ * HTTP hatası `{ ok: false }` olarak döner. Senkron fırlatmaz: çağıranlar birden çok cihaza
+ * `Promise.allSettled(devices.map(d => sendWebPush(...)))` ile gönderir ve tek bir bozuk kayıt
+ * (geçersiz p256dh, büyük mesaj) yalnızca KENDİ sonucunu düşürmelidir, diğer cihazları değil.
  */
-export function sendWebPush(target: PushTarget, payload: string | Uint8Array, options: WebPushOptions): Promise<WebPushResult> {
+export async function sendWebPush(target: PushTarget, payload: string | Uint8Array, options: WebPushOptions): Promise<WebPushResult> {
   const ttlSeconds = options.ttlSeconds ?? DEFAULT_TTL_SECONDS;
   const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
   if (!Number.isInteger(ttlSeconds) || ttlSeconds < 0) throw new Error("web push: ttlSeconds must be a non-negative integer");
@@ -80,7 +82,7 @@ export function sendWebPush(target: PushTarget, payload: string | Uint8Array, op
   if (options.topic !== undefined) headers.Topic = options.topic;
 
   // `Buffer.concat` her zaman yeni (paylaşılmayan) bir ArrayBuffer ayırır; daraltma güvenli.
-  return deliver(options.fetch ?? fetch, target.endpoint, headers, body as Uint8Array<ArrayBuffer>, timeoutMs);
+  return await deliver(options.fetch ?? fetch, target.endpoint, headers, body as Uint8Array<ArrayBuffer>, timeoutMs);
 }
 
 async function deliver(

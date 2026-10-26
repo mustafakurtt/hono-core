@@ -87,44 +87,50 @@ describe("sendWebPush — varsayılanlar ve gövde", () => {
   });
 });
 
-describe("sendWebPush — doğrulama senkron fırlatır", () => {
+describe("sendWebPush — doğrulama hatası promise'i reddeder", async () => {
   const { fn, calls } = fakeFetch(201);
 
-  test("geçersiz topic", () => {
+  test("geçersiz topic", async () => {
     for (const topic of ["", "a".repeat(33), "boşluk var", "nokta.lı", "türkçe"]) {
-      expect(() => sendWebPush(TARGET, "x", { ...base(fn), topic })).toThrow("web push: topic");
+      await expect(sendWebPush(TARGET, "x", { ...base(fn), topic })).rejects.toThrow("web push: topic");
     }
     // Sınırdaki geçerli değer gönderilir.
-    expect(() => sendWebPush(TARGET, "x", { ...base(fn), topic: `${"a".repeat(30)}_-` })).not.toThrow();
+    await expect(sendWebPush(TARGET, "x", { ...base(fn), topic: `${"a".repeat(30)}_-` })).resolves.toMatchObject({ ok: true });
   });
 
-  test("geçersiz TTL", () => {
+  test("geçersiz TTL", async () => {
     for (const ttlSeconds of [-1, 1.5, Number.NaN, Number.POSITIVE_INFINITY]) {
-      expect(() => sendWebPush(TARGET, "x", { ...base(fn), ttlSeconds })).toThrow("web push: ttlSeconds");
+      await expect(sendWebPush(TARGET, "x", { ...base(fn), ttlSeconds })).rejects.toThrow("web push: ttlSeconds");
     }
   });
 
-  test("geçersiz timeoutMs", () => {
+  test("geçersiz timeoutMs", async () => {
     for (const timeoutMs of [0, -5, 2.5, Number.NaN]) {
-      expect(() => sendWebPush(TARGET, "x", { ...base(fn), timeoutMs })).toThrow("web push: timeoutMs");
+      await expect(sendWebPush(TARGET, "x", { ...base(fn), timeoutMs })).rejects.toThrow("web push: timeoutMs");
     }
   });
 
-  test("https: olmayan endpoint (kaçış kapısı yok)", () => {
+  test("https: olmayan endpoint (kaçış kapısı yok)", async () => {
     for (const endpoint of ["http://fcm.googleapis.com/fcm/send/abc", "ws://localhost/x", "bozuk adres"]) {
-      expect(() => sendWebPush({ ...TARGET, endpoint }, "x", base(fn))).toThrow("web push: endpoint");
+      await expect(sendWebPush({ ...TARGET, endpoint }, "x", base(fn))).rejects.toThrow("web push: endpoint");
     }
   });
 
-  test("bozuk abonelik anahtarı, büyük içerik, yanlış subject", () => {
-    expect(() => sendWebPush({ ...TARGET, keys: { ...TARGET.keys, p256dh: "AAAA" } }, "x", base(fn))).toThrow("p256dh");
-    expect(() => sendWebPush(TARGET, "x".repeat(3994), base(fn))).toThrow("exceeds");
-    expect(() => sendWebPush(TARGET, "x", { ...base(fn), subject: "a@b.c" })).toThrow("subject");
+  test("bozuk abonelik anahtarı, büyük içerik, yanlış subject", async () => {
+    await expect(sendWebPush({ ...TARGET, keys: { ...TARGET.keys, p256dh: "AAAA" } }, "x", base(fn))).rejects.toThrow("p256dh");
+    await expect(sendWebPush(TARGET, "x".repeat(3994), base(fn))).rejects.toThrow("exceeds");
+    await expect(sendWebPush(TARGET, "x", { ...base(fn), subject: "a@b.c" })).rejects.toThrow("subject");
   });
 
-  test("hiçbir doğrulama hatasında istek atılmadı", () => {
+  test("hiçbir doğrulama hatasında istek atılmadı", async () => {
     // Yukarıdaki tek geçerli çağrı (sınırdaki topic) dışında fetch çağrılmadı.
     expect(calls.length).toBe(1);
+  });
+
+  test("tek bozuk cihaz yalnızca kendi sonucunu düşürür (allSettled)", async () => {
+    const devices = [TARGET, { ...TARGET, keys: { ...TARGET.keys, p256dh: "AAAA" } }, TARGET];
+    const results = await Promise.allSettled(devices.map((device) => sendWebPush(device, "x", base(fn))));
+    expect(results.map((result) => result.status)).toEqual(["fulfilled", "rejected", "fulfilled"]);
   });
 });
 

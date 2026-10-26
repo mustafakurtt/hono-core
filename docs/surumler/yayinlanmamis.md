@@ -36,15 +36,9 @@ laputa-next'te aynı dosyalar, önek `@laputa/core/push`):
 +export const isAllowedEndpoint = (endpoint: string) => isPushServiceEndpoint(endpoint, BROWSER_PUSH_SERVICE_HOSTS);
 ```
 
-**Ayrıca zorunlu — `push.sender.ts`:** doğrulama hataları artık senkron fırlatıldığı için (bkz.
-"Dikkat"), `map` geri çağrısı `async` olmalı. Aksi hâlde DB'deki tek bir bozuk abonelik (şemadan
-geçmiş ama geçerli P-256 noktası olmayan `p256dh`) ya da fazla büyük bir mesaj `Promise.allSettled`
-çağrılmadan önce fırlar ve **o kullanıcının bütün cihazlarına** gönderim düşer:
-
-```diff
--      devices.map((device) => sendWebPush(device, JSON.stringify(messageFor(device)), options)),
-+      devices.map(async (device) => sendWebPush(device, JSON.stringify(messageFor(device)), options)),
-```
+`push.sender.ts`'in gönderim döngüsü değişmez: `sendWebPush` kopyadaki gibi `async`'tir, her
+doğrulama hatası promise'i reddeder; `Promise.allSettled` ile tek bozuk cihaz yalnızca kendi
+sonucunu düşürür (core'da testle kilitli).
 
 Silinecekler: `packages/core/src/push/` (kaynak + testleri) ve barrel/`exports` satırı.
 `.env`'deki `VAPID_PUBLIC_KEY` / `VAPID_PRIVATE_KEY` **değiştirilmez**: biçim aynı, mevcut
@@ -118,13 +112,9 @@ bildirim gönder; bildirimin geldiğini ve içeriğin doğru göründüğünü k
 - **Uzunluk dolgusu yok:** şifreli gövdenin boyutu içeriğin boyutunu push servisine (Apple/Google/
   Mozilla) sızdırır (RFC 8291 §6). Uzunluğu gizli kalması gereken bir şey gönderiyorsan içeriği
   kendin sabit boya tamamla.
-- **Doğrulama hataları artık SENKRON fırlatır.** Kopyada `sendWebPush` `async`'ti, bozuk anahtar /
-  büyük içerik promise'i reddederdi; şimdi `topic`, `ttlSeconds`, `timeoutMs`, endpoint, anahtar ve
-  boyut hataları çağrı anında `Error` fırlatır (`"web push: …"` / `"vapid: …"`). Yalnızca
-  `.catch()` ile ya da `Promise.allSettled(list.map((x) => sendWebPush(...)))` ile yakalayan kod
-  bunları kaçırır: çağrıyı `try { await sendWebPush(...) }` içine al ya da `map` geri çağrısını
-  `async` yap (rfcear/laputa `push.sender.ts` için yukarıdaki diff).
-  Ağ hatası ve zaman aşımı promise'i reddetmeye, HTTP hatası `{ ok: false }` dönmeye devam eder.
+- **Doğrulama sıkılaştı:** `topic`, `ttlSeconds`, `timeoutMs` ve `https:` olmayan endpoint artık
+  ağa gitmeden reddedilir (promise reddi, `"web push: …"`). Kopyada bunlar push servisine gider ve
+  400 dönerdi. Hata sözleşmesi aynı: her hata promise'i reddeder, HTTP hatası `{ ok: false }` döner.
 - Boş `topic` (`""`) kopyada yok sayılırdı; artık fırlatır. Topic istemiyorsan alanı hiç verme.
 - `isPushServiceEndpoint` için `hosts` zorunludur; tarayıcı servisleri için
   `BROWSER_PUSH_SERVICE_HOSTS`'u açıkça ver. Endpoint'i abonelik **kaydedilirken** denetle;
