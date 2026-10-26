@@ -18,3 +18,4 @@ export {
   type RateLimitRedisClient,
   type RateLimitPipeline,
 } from "./stores/redis.store";
+export { emailKey } from "./email-key";

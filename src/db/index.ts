@@ -21,3 +21,5 @@ export {
 } from "./composite.repository";
 
 export { uuidPrimaryKey, timestamps, softDeleteColumn } from "./base.entity";
+
+export { paginate, type Page, type PaginateQuery } from "./pagination";

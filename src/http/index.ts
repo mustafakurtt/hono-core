@@ -48,3 +48,4 @@ export {
   type ShutdownManager,
   type ProcessSignal,
 } from "./shutdown";
+export { createClientIp, ipKey, type ClientIp, type ClientIpOptions } from "./client-ip";

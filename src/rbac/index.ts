@@ -58,3 +58,5 @@ export {
 } from "./permission-bootstrap";
 
 export type { AuthzContext } from "./rbac.types";
+
+export { diffChanges, type AuditChange, type AuditChanges, type DiffLimits } from "./audit-changes";
