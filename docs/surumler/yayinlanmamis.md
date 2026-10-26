@@ -61,6 +61,20 @@ Yok.
 ### Düzeltildi
 - `createThrottle({ maxKeys: 0 })` tüketici kopyasında sonsuz döngüye giriyordu;
   artık kurulumda hata fırlatır.
+- **Güvenlik — kilit sıfırlama:** `InMemoryRateLimitStore` (`maxEntries`) ve
+  `createThrottle` (`maxKeys`) kapasite dolunca en eski sayaçları atıyordu. Saldırgan
+  bir e-postanın giriş limitini doldurup ~10.000 rastgele anahtar göndererek o
+  e-postanın kilidini sıfırlayabiliyor, sonra denemeye devam edebiliyordu. Artık
+  önce süresi dolmuş pencereler, sonra en düşük sayılı (eşitlikte en eski)
+  pencereler atılır; engellenmiş (yüksek sayılı) pencereler en son gider. Kurbanı
+  attırmak için saldırganın ~10.000 anahtarın her birini aynı sayıya çıkarması
+  gerekir. Bellek sınırı aynen korunur. Tahliye artık toplu yapılıyor; `createThrottle`
+  dolu iken her yeni anahtarda tüm haritayı taramıyor (anahtar yağmurunda CPU yükü
+  kalktı). Yalnızca kapasite baskısı altında fark edilir: tek süpürmede sınırın
+  ~%10 altına inilir. API ve normal yükteki davranış değişmedi.
+  **Etki:** üç tüketici de (`rfcear`, `laputa-next`, `fenixAVM-bun`) giriş/form
+  sınırlayıcıları için `InMemoryRateLimitStore` kullanıyor. Hepsi korunur, kod
+  değişikliği gerekmiyor; core'u güncellemek yeterli.
 
 ### İç (tüketiciyi etkilemez)
 Yok.

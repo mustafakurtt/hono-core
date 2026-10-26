@@ -1,3 +1,4 @@
+import { evictUnderPressure } from "../evict";
 import type { RateLimitHit, RateLimitStore } from "../ratelimit.store";
 
 interface Window {
@@ -8,7 +9,8 @@ interface Window {
 
 export interface InMemoryRateLimitStoreOptions {
   /**
-   * Üst sınır. Aşılınca en eski pencereler atılır. Süreç belleğinin sınırsız
+   * Sert üst sınır. Aşılınca önce süresi dolmuş, sonra en düşük sayılı (eşitlikte en eski)
+   * pencereler atılır — yüksek sayılı (engellenmiş) pencereler en son. Süreç belleğinin sınırsız
    * şişmesini önler — anahtar uzayı kullanıcı girdisinden (e-posta/IP) geldiği için
    * bu bir savunma önlemidir, sadece hijyen değil. Varsayılan 10.000.
    */
@@ -25,6 +27,12 @@ export interface InMemoryRateLimitStoreOptions {
  * DİKKAT (çok-instance): süreç-yereldir. İki instance çalışırken her biri ayrı
  * sayar → efektif limit 2× olur. Paylaşımlı/gerçek limit gerekiyorsa
  * RedisRateLimitStore. (Aynı uyarı: InMemoryCacheStore.)
+ *
+ * TAHLİYE: eskiden salt ekleme sırasıyla (FIFO) atılıyordu; saldırgan kurbanın limitini
+ * doldurup ~maxEntries yeni anahtar göndererek kilidi sıfırlayabiliyordu. Artık sayı bazlı:
+ * engellenmiş bir pencere yüksek sayılıdır, düşük sayılılardan sonra atılır. Store limiti
+ * bilmez (port sözleşmesi değişmedi), sayı tek başına yeterli sinyaldir. Gerekçe ve
+ * karmaşıklık: ../evict.ts.
  */
 export class InMemoryRateLimitStore implements RateLimitStore {
   private readonly windows = new Map<string, Window>();
@@ -43,9 +51,9 @@ export class InMemoryRateLimitStore implements RateLimitStore {
     // Pencere yok ya da kapanmış → yenisini başlat.
     if (!existing || existing.expiresAt <= now) {
       const fresh: Window = { count: 1, expiresAt: now + windowSeconds * 1000 };
-      this.windows.delete(key); // LRU sırasını tazele
+      this.windows.delete(key); // açılış sırasını tazele (tahliyede eşitlikte en eski önce)
       this.windows.set(key, fresh);
-      this.evictIfNeeded();
+      evictUnderPressure(this.windows, this.maxEntries, (w) => w.expiresAt <= now, key);
       return { count: 1, ttlSeconds: windowSeconds };
     }
 
@@ -56,14 +64,5 @@ export class InMemoryRateLimitStore implements RateLimitStore {
       count: existing.count,
       ttlSeconds: Math.max(1, Math.ceil((existing.expiresAt - now) / 1000)),
     };
-  }
-
-  /** maxEntries aşıldıysa en eski (ilk eklenen) pencereleri at. */
-  private evictIfNeeded(): void {
-    while (this.windows.size > this.maxEntries) {
-      const oldest = this.windows.keys().next().value;
-      if (oldest === undefined) break;
-      this.windows.delete(oldest);
-    }
   }
 }

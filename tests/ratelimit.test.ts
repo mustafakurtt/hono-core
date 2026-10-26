@@ -203,3 +203,68 @@ describe("InMemoryRateLimitStore", () => {
     expect((await store.hit("b", 60)).count).toBe(1);
   });
 });
+
+/**
+ * Kapasite baskısı: anahtar uzayı kullanıcı girdisinden (e-posta/IP) geldiği için saldırgan
+ * yeni anahtar yağdırarak tahliyeyi tetikleyebilir. Eskiden tahliye FIFO idi ve kurbanın
+ * dolu penceresi en eskilerden biri olduğu için atılıyor, kilit sıfırlanıyordu.
+ */
+describe("InMemoryRateLimitStore — kapasite baskısı", () => {
+  test("SALDIRI: kurbanın dolu penceresi yeni anahtar yağdırarak sıfırlanamaz", async () => {
+    const store = new InMemoryRateLimitStore({ maxEntries: 10, now: () => 0 });
+    for (let i = 0; i < 5; i++) await store.hit("login:kurban@x.com", 60);
+
+    for (let i = 0; i < 1000; i++) await store.hit(`login:rastgele${i}@x.com`, 60);
+
+    expect((await store.hit("login:kurban@x.com", 60)).count).toBe(6);
+  });
+
+  test("SALDIRI (uçtan uca): 429 alan e-posta, anahtar yağmurundan sonra da 429 alır", async () => {
+    const app = buildApp(
+      createRateLimiter({
+        store: new InMemoryRateLimitStore({ maxEntries: 10 }),
+        keyPrefix: "login",
+        limit: 3,
+        windowSeconds: 60,
+        keyFn: emailKey,
+      })
+    );
+    for (let i = 0; i < 3; i++) expect((await app.request("/login", post("kurban@x.com"))).status).toBe(200);
+    expect((await app.request("/login", post("kurban@x.com"))).status).toBe(429);
+
+    for (let i = 0; i < 200; i++) await app.request("/login", post(`rastgele${i}@x.com`));
+
+    expect((await app.request("/login", post("kurban@x.com"))).status).toBe(429);
+  });
+
+  test("süresi dolmuş pencereler canlılardan ÖNCE geri kazanılır (sayıları yüksek olsa da)", async () => {
+    let t = 0;
+    const store = new InMemoryRateLimitStore({ maxEntries: 10, now: () => t });
+    for (let i = 0; i < 5; i++) for (let j = 0; j < 3; j++) await store.hit(`kisa${i}`, 1);
+    for (let i = 0; i < 5; i++) await store.hit(`canli${i}`, 60);
+
+    t = 2000; // kısa pencereler kapandı
+    await store.hit("yeni", 60); // 11. anahtar → süpürme
+
+    expect(store["windows"].size).toBe(6);
+    for (let i = 0; i < 5; i++) expect((await store.hit(`canli${i}`, 60)).count).toBe(2);
+  });
+
+  test("eşit sayıda en eski pencere atılır, gelen anahtar her zaman sayılır", async () => {
+    const store = new InMemoryRateLimitStore({ maxEntries: 10, now: () => 0 });
+    for (let i = 0; i <= 10; i++) await store.hit(`k${i}`, 60);
+
+    expect((await store.hit("k10", 60)).count).toBe(2);
+    expect((await store.hit("k0", 60)).count).toBe(1);
+  });
+
+  test("bellek sınırlı kalır: hiçbir an maxEntries aşılmaz", async () => {
+    const store = new InMemoryRateLimitStore({ maxEntries: 10, now: () => 0 });
+    await store.hit("kurban", 60);
+    await store.hit("kurban", 60);
+    for (let i = 0; i < 5000; i++) {
+      await store.hit(`k${i}`, 60);
+      expect(store["windows"].size).toBeLessThanOrEqual(10);
+    }
+  });
+});
