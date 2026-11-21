@@ -82,11 +82,11 @@
   "devDependencies": {
     "@hono/zod-validator": "^0.8.0",
     "@types/bun": "latest",
-    "@types/nodemailer": "^8.0.1",
+    "@types/nodemailer": "^8.0.2",
     "drizzle-orm": "^1.0.0-rc.4",
     "hono": "^4.13.19",
     "ioredis": "^5.11.1",
-    "nodemailer": "^9.1.1",
+    "nodemailer": "^10.6.1",
     "pino": "^9.6.0",
     "postgres": "^3.4.9",
     "prom-client": "^15.1.3",
