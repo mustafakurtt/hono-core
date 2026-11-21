@@ -2,17 +2,23 @@
 # gerçek bir Postgres ister; diğer testler altyapısız koşar.
 #
 # Port 5433 — tüketici projelerin 5432'siyle çakışmasın (ikisi aynı anda ayakta olabilir).
+# Adlar C:\dev düzenine göre: proje = depo adı, konteyner = <depo>-<servis>. Port yalnız 127.0.0.1.
+name: hono-core
+
 services:
   postgres:
     image: postgres:17-alpine
-    container_name: hono_core_test_pg
+    container_name: hono-core-test-postgres
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
       POSTGRES_DB: hono_core_test
     ports:
-      - "5433:5432"
-    # Test verisi kalıcı olmamalı — her koşu temiz başlasın diye volume YOK.
+      - "127.0.0.1:5433:5432"
+    # Test verisi kalıcı olmamalı — her koşu temiz başlasın. Veri bellekte (tmpfs): imajın kendi
+    # VOLUME'u adsız bir Docker birimi açıp test verisini biriktirmesin.
+    tmpfs:
+      - /var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 3s
